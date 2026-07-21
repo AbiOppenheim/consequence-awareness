@@ -1,0 +1,12 @@
+torch>=2.3
+transformers>=4.44
+transformer_lens>=2.0
+nnsight>=0.3
+datasets>=2.20
+scikit-learn>=1.5
+numpy
+pandas
+matplotlib
+einops
+jaxtyping
+tqdm

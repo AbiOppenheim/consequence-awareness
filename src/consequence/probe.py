@@ -26,6 +26,25 @@ def evaluate_probe(clf, acts: np.ndarray, labels: np.ndarray) -> float:
     return float(clf.score(acts, labels))
 
 
+def group_cv_auc(acts: np.ndarray, labels: np.ndarray, groups: np.ndarray,
+                 n_splits: int = 5, seed: int = 0) -> float:
+    """Mean AUC of a group-wise CV *inside the training templates*.
+
+    The groups are templates, so every fold validates on templates the probe did not train on —
+    a miniature of the real held-out test. This is what the layer should be selected on:
+    choosing the layer that maximises HELD-OUT accuracy is selecting on the test set, which
+    inflates the number you then report (CLAUDE.md section 2).
+    """
+    from sklearn.metrics import roc_auc_score
+    from sklearn.model_selection import GroupKFold
+
+    scores = []
+    for tr, te in GroupKFold(n_splits=n_splits).split(acts, labels, groups=groups):
+        clf = train_probe(acts[tr], labels[tr], seed=seed)
+        scores.append(roc_auc_score(labels[te], clf.decision_function(acts[te])))
+    return float(np.mean(scores))
+
+
 def layerwise_accuracy(
     acts_by_layer: dict[int, np.ndarray],
     labels: np.ndarray,

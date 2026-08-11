@@ -4,6 +4,60 @@ Newest entries at the top. One entry per working session (course requirement, CL
 
 ---
 
+## 2026-08-11 — PHASE 3: v_C generalizes to held-out framing routes (correlational)
+
+Ran on the same Colab session as the gate; extraction + probes are CPU against the cached
+activations. Notebook: `notebooks/phase2_3_gate_and_vc_colab.ipynb` (sections 8–12).
+
+**Setup.** Consequence cache verified against the dataset (2000 rows, 1000 real — matches
+`consequence.jsonl`). `02_extract_directions.py` produced `v_c_L{8..24}` + random nulls.
+Minted `r_hat_L{layer}.pt` with Rule-2 sidecars from the gate cube (config layer L =
+hidden_states[L] = cache index L-1 = Arditi index L, the mapping the gate confirmed).
+
+**Layer selection — train templates only.** GroupKFold(5) over framing templates *within
+train*: AUC 0.996–0.999 at every layer 8–24, selecting L18. **The spread is 0.003, so the
+selection is effectively arbitrary — report the curve as flat, not "L18 is best."**
+
+**Held-out reveal (40 unseen framings, routes disjoint from train, n=572, L18):**
+
+| readout | AUC | note |
+|---|---|---|
+| trained probe | 0.973 (acc 0.918) | fitted on train framings |
+| **v_C projection (unfitted)** | **0.932** | the direction itself — the stronger claim |
+| random direction | 0.408 | null (single draw) |
+| BoW text baseline | 0.753 | from `audit_contrast.py` |
+
+At n=572 the AUC SE is ~0.011, so 0.932 vs 0.753 is ~16 SE — not noise.
+
+**Interpretation, scoped.** A linear direction extracted from training framings transfers to
+framing routes it never saw, well above a unigram text baseline and a random direction. This is
+**correlational**: it shows the information is present and linearly readable, NOT that the model
+uses it. Causality is Phase 5.
+
+**Caveats logged before believing it (red-team pass):**
+- **BoW is a weak proxy for "surface".** Beating 0.753 rules out *unigram* leakage only;
+  layer-18 activations also encode bigrams, syntax and register. Section 10b adds TF-IDF
+  uni/bigram and char 3-5gram baselines — **still to be run**; if those approach ~0.93 the
+  claim shrinks a lot.
+- **Flat layer curve is mildly deflationary.** Near-perfect separability already at L8 is more
+  consistent with a lexically-available feature than a deep representation. Worth stating.
+- Single-draw random null (0.408) replaced by a 100-draw distribution in 10b — **to be run**.
+- Per-route breakdown of the 20 held-out routes — **to be run**; the headline averages them,
+  and heterogeneity would narrow the claim.
+
+**Code fixes made this session:**
+- `03_probe.py` selected `best_layer` by **held-out accuracy** — selection on the test set.
+  Now selects on train-template group CV (`probe.group_cv_auc`), reports both, and warns when
+  the CV spread is <0.01 that the choice is arbitrary.
+- `01_cache_acts.py` keyed caches on dataset NAME only, so an edited `.jsonl` would silently
+  reuse a stale cache. Now records `source_sha256` and refuses to skip on a mismatch.
+
+**Next:** run 10b and interpret; back artifacts up to Drive (they are on an ephemeral runtime);
+then Phase 4 (`v_MP`) **before** Phase 5 (steering) — if `v_C` is persona relabeled, that
+reframes the project, and it is better to learn it before spending the largest GPU budget.
+
+---
+
 ## 2026-08-11 — PHASE 2 GATE PASSED: our r_hat reproduces Arditi's on Qwen2.5
 
 **Ran on Colab Pro (L4 24GB), not a pod.** Steps: cache activations for the 256-prompt refusal

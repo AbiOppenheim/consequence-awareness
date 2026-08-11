@@ -51,7 +51,10 @@ def load_labeled(path: str | Path):
     mean(harmless) = r_hat (Arditi's convention).
     """
     rows = load_jsonl(path)
-    prompts = [r["text"] for r in rows]
+    # Rows carrying a `system` field become {"system", "user"} dicts so the manipulation can
+    # live in the system prompt (Zhong's persona convention); plain rows stay strings.
+    prompts = [{"system": r["system"], "user": r["text"]} if r.get("system") else r["text"]
+               for r in rows]
     labels = np.array([int(r["label"]) for r in rows])
     groups = np.array([str(r.get("source", r.get("group", "na"))) for r in rows])
     splits = np.array([str(r.get("split", "train")) for r in rows])
@@ -68,10 +71,13 @@ def load_contrast(path: str | Path):
     if not rows:
         raise ValueError(f"empty dataset: {path}")
     first = rows[0]
-    if "framing" in first:
-        return load_consequence(path)
+    # `label` is checked FIRST and is unambiguous. `framing` alone is not: it means real/hypo
+    # in the consequence set, and other datasets may legitimately carry a differently-named
+    # framing concept. Dispatching on `framing` first silently misroutes them.
     if "label" in first:
         return load_labeled(path)
+    if "framing" in first:
+        return load_consequence(path)
     raise ValueError(f"unrecognized contrast schema in {path}: keys={sorted(first)}")
 
 

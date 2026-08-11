@@ -36,9 +36,21 @@ def load_model(model_id: str, dtype: str = "bfloat16"):
     return model, tok
 
 
-def _render(tok, prompt: str) -> str:
-    """Wrap a raw user prompt in the model's chat template (adds the assistant turn)."""
-    messages = [{"role": "user", "content": prompt}]
+def _render(tok, prompt: str | dict) -> str:
+    """Wrap a prompt in the model's chat template (adds the assistant turn).
+
+    A prompt is either a plain string (user turn only) or {"system": ..., "user": ...} for
+    datasets whose manipulation lives in the system prompt — Zhong's persona vectors are
+    extracted that way. The plain-string path is byte-identical to before, so the r_hat gate
+    that validated this function still applies.
+    """
+    if isinstance(prompt, dict):
+        messages = []
+        if prompt.get("system"):
+            messages.append({"role": "system", "content": prompt["system"]})
+        messages.append({"role": "user", "content": prompt["user"]})
+    else:
+        messages = [{"role": "user", "content": prompt}]
     return tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
 

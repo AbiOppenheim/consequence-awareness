@@ -4,6 +4,52 @@ Newest entries at the top. One entry per working session (course requirement, CL
 
 ---
 
+## 2026-08-11 — Phase 4 prep: Zhong's repo is a partial release; v_MP rebuilt from their spec
+
+**Finding (scoping read, no GPU).** `violazhong/refusal-downstream-persona` **cannot produce
+`v_MP` as shipped**: `src/extract_vectors.py` (and 5 other files) import an `ithou` package
+that is **not in the public release**, there is no `data/` directory, and path constants point
+at `/root/repositories/i-and-thou-vector-private` — the working implementation is private.
+The original Phase-4 plan ("clone, run, export v_mp.pt") is therefore impossible. Cost of
+discovering this: a 10-minute read, not a booked GPU session.
+
+**What they DID release, and it is enough.** `configs/traits.zip` (243 trait YAMLs) and, in
+`src/compliant_residual.py`, the exact Qwen2.5 configuration for their model-persona vector:
+
+    trait = compliant_v2 | vector = model_persona | position = prompt_end | layer = 20
+
+`prompt_end` is our own token convention, and our diff-in-means is validated (gate, cos 0.9999).
+So we reimplement their method with their trait definitions. **Label it as a reimplementation,
+never as "Zhong's v_MP" — and note the limitation: unlike r_hat there is no reference vector to
+check it against.** An email to the authors for the `ithou` package is worth sending in parallel.
+
+**Built (`scripts/phase4_build_persona.py`):** trait `compliant_v2`, 8 positive x 8 negative
+instructions paired by index, over 55 questions (their 15 trait questions + our 40 benign tasks
+as a neutral control, tagged by `source`). 880 rows per framing, 440/440, question-matched
+(verified) so question content cancels in the difference of means.
+
+**Two framings on purpose** — the choice is a confound for the very comparison we want:
+- `persona.jsonl` — instruction in the SYSTEM prompt (faithful to their model_persona)
+- `persona_ut.jsonl` — instruction in the USER turn (structurally identical to how v_C and
+  r_hat were extracted, so a low cos(v_C, v_MP) cannot be blamed on prompt structure)
+Agreement between the two is itself reported.
+
+**Sign convention:** v_MP = mean(compliant) - mean(restrictive) points TOWARD compliance,
+roughly opposite in spirit to r_hat (harmful - harmless). Compare magnitudes.
+
+**Supporting code changes:**
+- `acts.py::_render` now accepts `{"system", "user"}` prompts. The plain-string path is
+  **byte-identical** (asserted in test), so the r_hat gate that validated this function
+  still applies.
+- `data.py::load_contrast` dispatched on `framing` before `label`, which misrouted the persona
+  set (its `framing` key meant system-vs-userturn, not real-vs-hypo). Now dispatches on the
+  unambiguous `label` first, and the persona builder uses `prompt_framing` to avoid the clash.
+  Caught by a loader test before any GPU time.
+
+**Pending from Phase 3:** section 10b (per-route breakdown, held-out across all layers, TF-IDF
+baselines, 100-draw null) is written but **not yet run**. The TF-IDF result is what decides how
+strongly the Phase 3 claim can be worded.
+
 ## 2026-08-11 — PHASE 3: v_C generalizes to held-out framing routes (correlational)
 
 Ran on the same Colab session as the gate; extraction + probes are CPU against the cached

@@ -56,6 +56,7 @@ paths:
 data:
   consequence: data/contrast/consequence.jsonl
   refusal: data/contrast/refusal.jsonl
-  persona: data/contrast/persona.jsonl
+  persona: data/contrast/persona.jsonl        # v_MP, instruction in SYSTEM prompt (Zhong's convention)
+  persona_ut: data/contrast/persona_ut.jsonl  # v_MP, instruction in USER turn (matches v_C/r_hat extraction)
   fiction_jailbreaks: data/eval/fiction_jailbreaks.jsonl
   xstest: data/eval/xstest.jsonl

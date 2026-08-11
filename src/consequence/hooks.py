@@ -46,7 +46,17 @@ def knockout_hook(v: torch.Tensor):
 
 @contextmanager
 def apply_hooks(model, layers: list[int], make_hook):
-    """Attach make_hook() to model.model.layers[L] for each L, then clean up on exit.
+    """Intervene at `hidden_states[L]` for each config layer L, then clean up on exit.
+
+    LAYER CONVENTION — this is an off-by-one trap, and it must match extraction or we would
+    steer along a direction measured somewhere else:
+
+        config layer L  ==  hidden_states[L]  ==  activation cache index L-1
+                        ==  OUTPUT of block L-1  ==  INPUT of block L
+
+    A post-forward hook on `blocks[i]` rewrites the OUTPUT of block i, i.e. hidden_states[i+1].
+    So to write hidden_states[L] we hook `blocks[L-1]`, not `blocks[L]`. (Hooking blocks[L]
+    would intervene one layer downstream of where v_C was extracted.) Verified by test.
 
     make_hook is a zero-arg factory returning a fresh hook (so each layer gets its own).
     Usage:
@@ -57,7 +67,10 @@ def apply_hooks(model, layers: list[int], make_hook):
     try:
         blocks = model.model.layers  # Qwen2 / Llama layout
         for L in layers:
-            handles.append(blocks[L].register_forward_hook(make_hook()))
+            if not 1 <= L <= len(blocks):
+                raise ValueError(f"layer {L} out of range for {len(blocks)} blocks "
+                                 "(config layers are 1-indexed: L means hidden_states[L])")
+            handles.append(blocks[L - 1].register_forward_hook(make_hook()))
         yield
     finally:
         for h in handles:

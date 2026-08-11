@@ -34,6 +34,9 @@ data/raw/*
 # scripts/phase2_build_refusal.py, which IS committed — so the pipeline stays
 # reproducible without this repo redistributing a harmful-prompt list.
 data/contrast/refusal.jsonl
+# published jailbreak prompts, downloaded by scripts/phase5_build_eval.py — this repo does
+# not redistribute a curated attack set. xstest.jsonl is SAFE prompts and stays committed.
+data/eval/fiction_jailbreaks.jsonl
 
 # ---- artifacts ----
 # Heavy or potentially-harmful outputs are gitignored; the committed interface is the

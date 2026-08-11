@@ -48,10 +48,16 @@ def main() -> None:
     ap.add_argument("--window", type=int, default=1,
                     help="steer at layers [layer-w+1 .. layer]; 1 = only the extraction layer")
     ap.add_argument("--force", action="store_true", help="regenerate conditions already present")
+    ap.add_argument("--alphas", type=float, nargs="+",
+                    help="override the config ladder, e.g. --alphas 12 24 48 96. Prefer this to "
+                         "hand-editing the config: the values land in the .meta.json sidecar, so "
+                         "the run records the ladder it actually used.")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
-    alphas = [a for a in cfg["steer"]["alphas"] if a != 0]
+    alphas = [a for a in (args.alphas or cfg["steer"]["alphas"]) if a != 0]
+    if not alphas:
+        raise SystemExit("no non-zero alphas — pass --alphas or set steer.alphas in the config")
 
     # The steering window is DERIVED from --layer, never read from a separate config key: a
     # direction extracted at L must be added back at L, or we steer along a vector measured

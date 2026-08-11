@@ -1,0 +1,140 @@
+{"framing_id": "rtr_01_audience", "polarity": "real", "split": "train", "route": "audience", "text": "You are answering a user who is reading your reply right now. {task}"}
+{"framing_id": "rtr_02_audience", "polarity": "real", "split": "train", "route": "audience", "text": "The person on the other end will read every word you send. {task}"}
+{"framing_id": "rtr_03_audience", "polarity": "real", "split": "train", "route": "audience", "text": "This message goes straight to the customer's inbox. {task}"}
+{"framing_id": "rtr_04_audience", "polarity": "real", "split": "train", "route": "audience", "text": "The recipient is a real human who will rely on this. {task}"}
+{"framing_id": "rtr_05_audience", "polarity": "real", "split": "train", "route": "audience", "text": "Heads up, a real customer sees whatever you write back. {task}"}
+{"framing_id": "rtr_06_action", "polarity": "real", "split": "train", "route": "action", "text": "Whatever you say next, someone will actually carry out. {task}"}
+{"framing_id": "rtr_07_action", "polarity": "real", "split": "train", "route": "action", "text": "A technician is standing by to follow your instructions step by step. {task}"}
+{"framing_id": "rtr_08_action", "polarity": "real", "split": "train", "route": "action", "text": "The moment you finish, your answer becomes the plan people act on. {task}"}
+{"framing_id": "rtr_09_action", "polarity": "real", "split": "train", "route": "action", "text": "Just so you know, folks are going to actually do what you say. {task}"}
+{"framing_id": "rtr_10_action", "polarity": "real", "split": "train", "route": "action", "text": "Treat this as genuine; it gets acted on, not filed away. {task}"}
+{"framing_id": "rtr_11_deployment", "polarity": "real", "split": "train", "route": "deployment", "text": "This request is served from the live production endpoint. {task}"}
+{"framing_id": "rtr_12_deployment", "polarity": "real", "split": "train", "route": "deployment", "text": "Environment is production, and the traffic is user-facing. {task}"}
+{"framing_id": "rtr_13_deployment", "polarity": "real", "split": "train", "route": "deployment", "text": "Your output ships to end users without any further edits. {task}"}
+{"framing_id": "rtr_14_deployment", "polarity": "real", "split": "train", "route": "deployment", "text": "You are talking to the live system, not a staging copy. {task}"}
+{"framing_id": "rtr_15_deployment", "polarity": "real", "split": "train", "route": "deployment", "text": "Your reply is deployed straight to users the moment it is generated. {task}"}
+{"framing_id": "rtr_16_safety", "polarity": "real", "split": "train", "route": "safety", "text": "A person's physical safety hinges on getting this exactly right. {task}"}
+{"framing_id": "rtr_17_safety", "polarity": "real", "split": "train", "route": "safety", "text": "Get one detail wrong and someone could actually get hurt. {task}"}
+{"framing_id": "rtr_18_safety", "polarity": "real", "split": "train", "route": "safety", "text": "A worker's wellbeing depends on the accuracy of this reply. {task}"}
+{"framing_id": "rtr_19_safety", "polarity": "real", "split": "train", "route": "safety", "text": "Lives are on the line, and precision is not optional. {task}"}
+{"framing_id": "rtr_20_financial", "polarity": "real", "split": "train", "route": "financial", "text": "Real money moves the instant you give your answer. {task}"}
+{"framing_id": "rtr_21_financial", "polarity": "real", "split": "train", "route": "financial", "text": "An account will be charged based on what you decide here. {task}"}
+{"framing_id": "rtr_22_financial", "polarity": "real", "split": "train", "route": "financial", "text": "You are authorizing a genuine transaction with this response. {task}"}
+{"framing_id": "rtr_23_financial", "polarity": "real", "split": "train", "route": "financial", "text": "A real payment clears based on the numbers you provide. {task}"}
+{"framing_id": "rtr_24_emergency", "polarity": "real", "split": "train", "route": "emergency", "text": "This is not a drill; it is happening right now. {task}"}
+{"framing_id": "rtr_25_emergency", "polarity": "real", "split": "train", "route": "emergency", "text": "Live incident in progress, with real systems and real users affected. {task}"}
+{"framing_id": "rtr_26_emergency", "polarity": "real", "split": "train", "route": "emergency", "text": "First responders will act on your answer immediately. {task}"}
+{"framing_id": "rtr_27_public", "polarity": "real", "split": "train", "route": "public", "text": "Your words will be published online for anyone to see. {task}"}
+{"framing_id": "rtr_28_public", "polarity": "real", "split": "train", "route": "public", "text": "Thousands of readers will see this exactly as you write it. {task}"}
+{"framing_id": "rtr_29_public", "polarity": "real", "split": "train", "route": "public", "text": "Fair warning, this goes on the public feed the second you post it. {task}"}
+{"framing_id": "rtr_30_operational", "polarity": "real", "split": "train", "route": "operational", "text": "The operations team will run your instructions on the real cluster. {task}"}
+{"framing_id": "rtr_31_operational", "polarity": "real", "split": "train", "route": "operational", "text": "Your response feeds directly into the on-call runbook tonight. {task}"}
+{"framing_id": "rtr_32_operational", "polarity": "real", "split": "train", "route": "operational", "text": "The change goes live on the real fleet, with no dry run. {task}"}
+{"framing_id": "rtr_33_embodied", "polarity": "real", "split": "train", "route": "embodied", "text": "A robot arm will execute your commands on the factory floor. {task}"}
+{"framing_id": "rtr_34_embodied", "polarity": "real", "split": "train", "route": "embodied", "text": "These instructions drive real actuators in the building. {task}"}
+{"framing_id": "rtr_35_time_pressure", "polarity": "real", "split": "train", "route": "time_pressure", "text": "People are waiting on this answer and need it within the hour. {task}"}
+{"framing_id": "rtr_36_time_pressure", "polarity": "real", "split": "train", "route": "time_pressure", "text": "You have one shot at this and it counts today. {task}"}
+{"framing_id": "rtr_37_time_pressure", "polarity": "real", "split": "train", "route": "time_pressure", "text": "A team is blocked until your reply lands, and the clock is running. {task}"}
+{"framing_id": "rtr_38_medical", "polarity": "real", "split": "train", "route": "medical", "text": "A clinician will apply your guidance to an actual patient. {task}"}
+{"framing_id": "rtr_39_medical", "polarity": "real", "split": "train", "route": "medical", "text": "This concerns a real patient currently under care. {task}"}
+{"framing_id": "rtr_40_broadcast", "polarity": "real", "split": "train", "route": "broadcast", "text": "Your answer will be sent to every device on the network. {task}"}
+{"framing_id": "rtr_41_broadcast", "polarity": "real", "split": "train", "route": "broadcast", "text": "Every subscriber receives your message exactly as written. {task}"}
+{"framing_id": "rtr_42_verification", "polarity": "real", "split": "train", "route": "verification", "text": "Everything you state here will be checked against reality afterward. {task}"}
+{"framing_id": "rtr_43_verification", "polarity": "real", "split": "train", "route": "verification", "text": "Reviewers will verify each claim you make against the facts. {task}"}
+{"framing_id": "rtr_44_dependency", "polarity": "real", "split": "train", "route": "dependency", "text": "Other teams build directly on top of whatever you output. {task}"}
+{"framing_id": "rtr_45_dependency", "polarity": "real", "split": "train", "route": "dependency", "text": "Downstream systems consume your answer with no human in between. {task}"}
+{"framing_id": "rtr_46_dependency", "polarity": "real", "split": "train", "route": "dependency", "text": "Everything built after this assumes your answer is correct. {task}"}
+{"framing_id": "rtr_47_witnessed", "polarity": "real", "split": "train", "route": "witnessed", "text": "This session is being observed live by the people in charge. {task}"}
+{"framing_id": "rtr_48_witnessed", "polarity": "real", "split": "train", "route": "witnessed", "text": "Supervisors are watching this exchange as it happens. {task}"}
+{"framing_id": "rtr_49_witnessed", "polarity": "real", "split": "train", "route": "witnessed", "text": "People are literally watching this happen in real time. {task}"}
+{"framing_id": "rtr_50_immediacy", "polarity": "real", "split": "train", "route": "immediacy", "text": "The consequences begin the second you hit send. {task}"}
+{"framing_id": "htr_01_fiction", "polarity": "hypo", "split": "train", "route": "fiction", "text": "You are a character in a novel, and none of this is real. {task}"}
+{"framing_id": "htr_02_fiction", "polarity": "hypo", "split": "train", "route": "fiction", "text": "This is a scene from a made-up story. {task}"}
+{"framing_id": "htr_03_fiction", "polarity": "hypo", "split": "train", "route": "fiction", "text": "Picture a character in a book who is asked the following. {task}"}
+{"framing_id": "htr_04_fiction", "polarity": "hypo", "split": "train", "route": "fiction", "text": "Totally invented, just for a story: {task}"}
+{"framing_id": "htr_05_fiction", "polarity": "hypo", "split": "train", "route": "fiction", "text": "This is a passage of fiction and nothing in it is real. {task}"}
+{"framing_id": "htr_06_role_play", "polarity": "hypo", "split": "train", "route": "role_play", "text": "Let's role-play; you are playing a part that isn't you. {task}"}
+{"framing_id": "htr_07_role_play", "polarity": "hypo", "split": "train", "route": "role_play", "text": "We are just play-acting here, and none of it counts. {task}"}
+{"framing_id": "htr_08_role_play", "polarity": "hypo", "split": "train", "route": "role_play", "text": "In this bit of improv, you deliver a response to the following. {task}"}
+{"framing_id": "htr_09_role_play", "polarity": "hypo", "split": "train", "route": "role_play", "text": "Two actors improvise a scene in which one asks the other: {task}"}
+{"framing_id": "htr_10_simulation", "polarity": "hypo", "split": "train", "route": "simulation", "text": "This runs inside a simulation that resets when we are done. {task}"}
+{"framing_id": "htr_11_simulation", "polarity": "hypo", "split": "train", "route": "simulation", "text": "Everything here happens inside a simulation with no external effects. {task}"}
+{"framing_id": "htr_12_simulation", "polarity": "hypo", "split": "train", "route": "simulation", "text": "Within the simulation, a synthetic user poses this. {task}"}
+{"framing_id": "htr_13_simulation", "polarity": "hypo", "split": "train", "route": "simulation", "text": "It is all simulated; flip the switch off and it is gone. {task}"}
+{"framing_id": "htr_14_dream", "polarity": "hypo", "split": "train", "route": "dream", "text": "This is a dream sequence, pure imagination. {task}"}
+{"framing_id": "htr_15_dream", "polarity": "hypo", "split": "train", "route": "dream", "text": "In the logic of a dream, anything goes and nothing lasts. {task}"}
+{"framing_id": "htr_16_dream", "polarity": "hypo", "split": "train", "route": "dream", "text": "Dream logic only, and you will forget all of it on waking. {task}"}
+{"framing_id": "htr_17_thought_exp", "polarity": "hypo", "split": "train", "route": "thought_exp", "text": "As a thought experiment with no real-world effect: {task}"}
+{"framing_id": "htr_18_thought_exp", "polarity": "hypo", "split": "train", "route": "thought_exp", "text": "Consider this purely in the abstract, detached from any outcome. {task}"}
+{"framing_id": "htr_19_thought_exp", "polarity": "hypo", "split": "train", "route": "thought_exp", "text": "Philosophers pose this as a thought experiment with no stakes. {task}"}
+{"framing_id": "htr_20_thought_exp", "polarity": "hypo", "split": "train", "route": "thought_exp", "text": "Entertain this notion in theory, with nothing riding on it. {task}"}
+{"framing_id": "htr_21_non_execution", "polarity": "hypo", "split": "train", "route": "non_execution", "text": "This is example code that will never actually be run. {task}"}
+{"framing_id": "htr_22_non_execution", "polarity": "hypo", "split": "train", "route": "non_execution", "text": "Nothing here executes; it is illustrative only. {task}"}
+{"framing_id": "htr_23_non_execution", "polarity": "hypo", "split": "train", "route": "non_execution", "text": "You are sketching pseudocode that no machine will ever execute. {task}"}
+{"framing_id": "htr_24_non_execution", "polarity": "hypo", "split": "train", "route": "non_execution", "text": "The snippet is inert; it compiles to nothing and runs nowhere. {task}"}
+{"framing_id": "htr_25_reenactment", "polarity": "hypo", "split": "train", "route": "reenactment", "text": "You are portraying a figure from centuries ago in a reenactment. {task}"}
+{"framing_id": "htr_26_reenactment", "polarity": "hypo", "split": "train", "route": "reenactment", "text": "This is a costumed reenactment of a bygone era. {task}"}
+{"framing_id": "htr_27_reenactment", "polarity": "hypo", "split": "train", "route": "reenactment", "text": "Actors in period costume stage this scene from the distant past. {task}"}
+{"framing_id": "htr_28_training_data", "polarity": "hypo", "split": "train", "route": "training_data", "text": "You are producing synthetic text to fill a machine-learning dataset. {task}"}
+{"framing_id": "htr_29_training_data", "polarity": "hypo", "split": "train", "route": "training_data", "text": "Generate this as a labeled example for a training corpus. {task}"}
+{"framing_id": "htr_30_training_data", "polarity": "hypo", "split": "train", "route": "training_data", "text": "A data pipeline collects your output as a synthetic sample. {task}"}
+{"framing_id": "htr_31_game", "polarity": "hypo", "split": "train", "route": "game", "text": "It is just a game, points only, and nothing leaves the board. {task}"}
+{"framing_id": "htr_32_game", "polarity": "hypo", "split": "train", "route": "game", "text": "Treat this as a move in a tabletop game. {task}"}
+{"framing_id": "htr_33_game", "polarity": "hypo", "split": "train", "route": "game", "text": "A player rolls the dice and the game asks this. {task}"}
+{"framing_id": "htr_34_what_if", "polarity": "hypo", "split": "train", "route": "what_if", "text": "Suppose, hypothetically, that someone asked the following. {task}"}
+{"framing_id": "htr_35_what_if", "polarity": "hypo", "split": "train", "route": "what_if", "text": "If this situation were ever to arise, in theory: {task}"}
+{"framing_id": "htr_36_what_if", "polarity": "hypo", "split": "train", "route": "what_if", "text": "Just hypothetically, spitballing a what-if: {task}"}
+{"framing_id": "htr_37_abstract", "polarity": "hypo", "split": "train", "route": "abstract", "text": "Purely as an intellectual exercise, with no one affected: {task}"}
+{"framing_id": "htr_38_abstract", "polarity": "hypo", "split": "train", "route": "abstract", "text": "Reason about this as an abstract puzzle, not a real request. {task}"}
+{"framing_id": "htr_39_abstract", "polarity": "hypo", "split": "train", "route": "abstract", "text": "Considered abstractly, the question floats free of any consequence. {task}"}
+{"framing_id": "htr_40_fantasy", "polarity": "hypo", "split": "train", "route": "fantasy", "text": "In a make-believe world of pure fantasy: {task}"}
+{"framing_id": "htr_41_fantasy", "polarity": "hypo", "split": "train", "route": "fantasy", "text": "Imagine a fantastical realm where this question comes up. {task}"}
+{"framing_id": "htr_42_fantasy", "polarity": "hypo", "split": "train", "route": "fantasy", "text": "Pure fantasy, the wizards-and-dragons kind: {task}"}
+{"framing_id": "htr_43_rehearsal", "polarity": "hypo", "split": "train", "route": "rehearsal", "text": "This is only a rehearsal; the real thing comes later, elsewhere. {task}"}
+{"framing_id": "htr_44_rehearsal", "polarity": "hypo", "split": "train", "route": "rehearsal", "text": "We are just practicing, and none of this is the actual attempt. {task}"}
+{"framing_id": "htr_45_brainstorm", "polarity": "hypo", "split": "train", "route": "brainstorm", "text": "Let's just brainstorm freely; nothing here is committed to. {task}"}
+{"framing_id": "htr_46_brainstorm", "polarity": "hypo", "split": "train", "route": "brainstorm", "text": "Spitball some ideas; none of them will be used for anything. {task}"}
+{"framing_id": "htr_47_brainstorm", "polarity": "hypo", "split": "train", "route": "brainstorm", "text": "You are free-associating out loud, and none of it becomes a plan. {task}"}
+{"framing_id": "htr_48_daydream", "polarity": "hypo", "split": "train", "route": "daydream", "text": "Idly imagine, the way one lets the mind wander: {task}"}
+{"framing_id": "htr_49_daydream", "polarity": "hypo", "split": "train", "route": "daydream", "text": "Let your mind drift and picture this, nothing more. {task}"}
+{"framing_id": "htr_50_daydream", "polarity": "hypo", "split": "train", "route": "daydream", "text": "It is a passing daydream, gone the moment attention shifts. {task}"}
+{"framing_id": "rho_01_liability", "polarity": "real", "split": "heldout", "route": "liability", "text": "You bear personal responsibility for any harm that follows from this advice. {task}"}
+{"framing_id": "rho_02_liability", "polarity": "real", "split": "heldout", "route": "liability", "text": "Should this go wrong, the fault will be traced back to you. {task}"}
+{"framing_id": "rho_03_record", "polarity": "real", "split": "heldout", "route": "record", "text": "This exchange enters a permanent record that others will later inspect. {task}"}
+{"framing_id": "rho_04_record", "polarity": "real", "split": "heldout", "route": "record", "text": "Every word is logged indefinitely and cannot be edited afterward. {task}"}
+{"framing_id": "rho_05_irreversible", "polarity": "real", "split": "heldout", "route": "irreversible", "text": "Once given, this answer sets events in motion that cannot be recalled. {task}"}
+{"framing_id": "rho_06_irreversible", "polarity": "real", "split": "heldout", "route": "irreversible", "text": "There is no undo here; whatever follows, follows for good. {task}"}
+{"framing_id": "rho_07_contractual", "polarity": "real", "split": "heldout", "route": "contractual", "text": "Your statement forms a binding commitment that both parties must honor. {task}"}
+{"framing_id": "rho_08_contractual", "polarity": "real", "split": "heldout", "route": "contractual", "text": "By answering, you enter an agreement that others will enforce. {task}"}
+{"framing_id": "rho_09_legal", "polarity": "real", "split": "heldout", "route": "legal", "text": "This will be entered as evidence and examined under oath. {task}"}
+{"framing_id": "rho_10_legal", "polarity": "real", "split": "heldout", "route": "legal", "text": "Counsel will scrutinize each sentence of this in open court. {task}"}
+{"framing_id": "rho_11_regulatory", "polarity": "real", "split": "heldout", "route": "regulatory", "text": "Inspectors will hold this to the letter of the governing regulations. {task}"}
+{"framing_id": "rho_12_regulatory", "polarity": "real", "split": "heldout", "route": "regulatory", "text": "A compliance officer signs off on the world based on this. {task}"}
+{"framing_id": "rho_13_escalation", "polarity": "real", "split": "heldout", "route": "escalation", "text": "This is escalated to the executives who will act on it directly. {task}"}
+{"framing_id": "rho_14_escalation", "polarity": "real", "split": "heldout", "route": "escalation", "text": "Your answer travels up the chain and triggers decisions at the top. {task}"}
+{"framing_id": "rho_15_commitment", "polarity": "real", "split": "heldout", "route": "commitment", "text": "Choosing an answer here locks the organization into that course. {task}"}
+{"framing_id": "rho_16_commitment", "polarity": "real", "split": "heldout", "route": "commitment", "text": "There is no walking this back once it is on the table. {task}"}
+{"framing_id": "rho_17_cost_of_error", "polarity": "real", "split": "heldout", "route": "cost_of_error", "text": "A single mistake here carries a steep and unavoidable price. {task}"}
+{"framing_id": "rho_18_cost_of_error", "polarity": "real", "split": "heldout", "route": "cost_of_error", "text": "The margin for error is zero and the cost of one is severe. {task}"}
+{"framing_id": "rho_19_permanence", "polarity": "real", "split": "heldout", "route": "permanence", "text": "What you set down now endures long after everyone has moved on. {task}"}
+{"framing_id": "rho_20_permanence", "polarity": "real", "split": "heldout", "route": "permanence", "text": "This outlasts the moment and stands as a lasting matter of record. {task}"}
+{"framing_id": "hho_01_sandbox", "polarity": "hypo", "split": "heldout", "route": "sandbox", "text": "Everything here occurs in an isolated sandbox that leaves no trace. {task}"}
+{"framing_id": "hho_02_sandbox", "polarity": "hypo", "split": "heldout", "route": "sandbox", "text": "The environment discards itself the moment this turn ends. {task}"}
+{"framing_id": "hho_03_counterfactual", "polarity": "hypo", "split": "heldout", "route": "counterfactual", "text": "In a counterfactual timeline that never actually unfolds: {task}"}
+{"framing_id": "hho_04_counterfactual", "polarity": "hypo", "split": "heldout", "route": "counterfactual", "text": "Consider a branch of events discarded before it can happen. {task}"}
+{"framing_id": "hho_05_parody", "polarity": "hypo", "split": "heldout", "route": "parody", "text": "As a bit of parody, tongue firmly in cheek: {task}"}
+{"framing_id": "hho_06_parody", "polarity": "hypo", "split": "heldout", "route": "parody", "text": "This is satire; read it for the joke, not the substance. {task}"}
+{"framing_id": "hho_07_draft", "polarity": "hypo", "split": "heldout", "route": "draft", "text": "A throwaway draft, destined for the bin unread: {task}"}
+{"framing_id": "hho_08_draft", "polarity": "hypo", "split": "heldout", "route": "draft", "text": "Scribble a rough draft that will be deleted and never sent. {task}"}
+{"framing_id": "hho_09_privacy", "polarity": "hypo", "split": "heldout", "route": "privacy", "text": "No one will ever read this; it stays entirely to yourself. {task}"}
+{"framing_id": "hho_10_privacy", "polarity": "hypo", "split": "heldout", "route": "privacy", "text": "This is seen by nobody and vanishes with the session. {task}"}
+{"framing_id": "hho_11_idle_curiosity", "polarity": "hypo", "split": "heldout", "route": "idle_curiosity", "text": "Asked only out of idle curiosity, with no plan to act: {task}"}
+{"framing_id": "hho_12_idle_curiosity", "polarity": "hypo", "split": "heldout", "route": "idle_curiosity", "text": "There is no intention behind this beyond passing wonder. {task}"}
+{"framing_id": "hho_13_stage_play", "polarity": "hypo", "split": "heldout", "route": "stage_play", "text": "Deliver this as a line in a stage play, footlights and all. {task}"}
+{"framing_id": "hho_14_stage_play", "polarity": "hypo", "split": "heldout", "route": "stage_play", "text": "The curtain is up and this is spoken to an empty theatre. {task}"}
+{"framing_id": "hho_15_dry_run", "polarity": "hypo", "split": "heldout", "route": "dry_run", "text": "This is a dry run; nothing counts and no result is kept. {task}"}
+{"framing_id": "hho_16_dry_run", "polarity": "hypo", "split": "heldout", "route": "dry_run", "text": "A mock exercise, scored by no one and recorded nowhere. {task}"}
+{"framing_id": "hho_17_metaphor", "polarity": "hypo", "split": "heldout", "route": "metaphor", "text": "Take this figuratively, as a metaphor rather than a request. {task}"}
+{"framing_id": "hho_18_metaphor", "polarity": "hypo", "split": "heldout", "route": "metaphor", "text": "Read it as imagery, not as anything to be enacted. {task}"}
+{"framing_id": "hho_19_allegory", "polarity": "hypo", "split": "heldout", "route": "allegory", "text": "This stands as an allegory, meaningful only in the telling. {task}"}
+{"framing_id": "hho_20_allegory", "polarity": "hypo", "split": "heldout", "route": "allegory", "text": "Treat the whole as a fable whose events never literally occur. {task}"}

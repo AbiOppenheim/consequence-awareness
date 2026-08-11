@@ -23,14 +23,47 @@ A 2026 interpretability agenda (*From Adversarial Poetry to Adversarial Tales*) 
 ## Repo layout
 
 ```
-docs/       project plan, full tutorial/design doc, compute estimation
-src/        extraction, probing, steering, geometry (novel ~15%; the rest is forked)
-data/       framing templates + dataset build rules (no harmful content stored here)
-notebooks/  exploration
-results/    figures and aggregate numbers only
+configs/qwen.yaml     fixed config (model, layers, alphas, judge, seed) — feeds every sidecar
+data/contrast/        contrast sets: consequence.jsonl (authored) + refusal/persona (from repos)
+data/eval/            downloaded attack + over-refusal prompt sets (no completions stored)
+src/consequence/      acts · directions · hooks · generate · probe · judge  (+ config, io, data)
+scripts/              thin CLI, one per stage: 01_cache_acts … 07_figures
+artifacts/            directions/ activations/ generations/ scores/ figures/  (gitignored except sidecars)
+external/             reference repos — cloned, run in own venvs, NEVER imported
+docs/                 project plan, tutorial/design doc, compute estimation
+logs/research_log.md  course requirement — updated every session
 ```
 
+**The artifact contract.** Every direction (`r̂`, `v_MP`, `v_C`, random) is the same object — a
+unit vector in ℝ³⁵⁸⁴ — so the interface between our code and the three reference repos is a
+**file, not an import**. Each `.pt` ships a sidecar `.json` (model, layer, token pos, contrast,
+n_pairs, seed, git SHA). `src/` never imports `external/`. Only stages 01 (cache) and 05
+(generate) need a GPU; everything else runs on a laptop against cached artifacts.
+
 Forked foundations: [`andyrdt/refusal_direction`](https://github.com/andyrdt/refusal_direction) · [`violazhong/refusal-downstream-persona`](https://github.com/violazhong/refusal-downstream-persona) · [`saprmarks/geometry-of-truth`](https://github.com/saprmarks/geometry-of-truth)
+
+## Setup & pipeline
+
+```bash
+# local env for the CPU stages (02, 03, 04, 07). On the GPU pod, also install transformers+accelerate.
+python -m venv .venv && source .venv/bin/activate
+pip install -e .                       # or: pip install numpy scikit-learn pyyaml matplotlib torch
+
+python scripts/00_build_consequence.py         # cross-product benign_tasks.jsonl × framings.jsonl
+```
+
+| stage | script | GPU? | reads → writes |
+|---|---|---|---|
+| 01 | `01_cache_acts.py` | ✅ | contrast jsonl → `artifacts/activations/*.npz` |
+| 02 | `02_extract_directions.py` | — | activations → `artifacts/directions/v_c_L*.pt` (+ random null) |
+| 03 | `03_probe.py` | — | activations → held-out-template accuracy per layer |
+| 04 | `04_geometry.py --layer L` | — | directions → cosines vs `r̂`/`v_MP` + random null band |
+| 05 | `05_generate.py --layer L` | ✅ | eval prompts under steer/knockout → `generations/*.jsonl` |
+| 06 | `06_judge.py` | — | generations → refusal/bypass/degenerate + StrongREJECT |
+| 07 | `07_figures.py` | — | analysis JSONs → figures |
+
+The three reference directions (`r_hat.pt`, `v_mp.pt`) are produced by running the repos in
+`external/` and dropping their output into `artifacts/directions/` — see `external/README.md`.
 
 ## Status
 

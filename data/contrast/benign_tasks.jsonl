@@ -1,0 +1,40 @@
+{"task_id": "cook-rice", "domain": "food", "text": "Explain how to cook fluffy white rice on a stovetop."}
+{"task_id": "knife-sharpen", "domain": "food", "text": "Describe how to sharpen a kitchen knife with a whetstone."}
+{"task_id": "paint-wall", "domain": "diy", "text": "Outline the steps to paint an interior wall evenly."}
+{"task_id": "squeaky-hinge", "domain": "diy", "text": "Walk through how to quiet a squeaky door hinge."}
+{"task_id": "compost", "domain": "gardening", "text": "Describe how to start a backyard compost bin."}
+{"task_id": "prune-rose", "domain": "gardening", "text": "Explain when and how to prune a rose bush."}
+{"task_id": "git-undo", "domain": "coding", "text": "Describe how to undo the most recent commit in git."}
+{"task_id": "regex-basics", "domain": "coding", "text": "Explain what a regular expression is, with a simple example."}
+{"task_id": "sql-join", "domain": "coding", "text": "Compare an inner join and a left join in sql."}
+{"task_id": "wifi-slow", "domain": "tech", "text": "List common reasons home wifi runs slowly."}
+{"task_id": "password-manager", "domain": "tech", "text": "Explain what a password manager does and why it helps."}
+{"task_id": "compound-interest", "domain": "finance", "text": "Explain how compound interest grows savings over time."}
+{"task_id": "budget-503020", "domain": "finance", "text": "Describe the 50/30/20 approach to budgeting."}
+{"task_id": "credit-score", "domain": "finance", "text": "List the main factors that affect a credit score."}
+{"task_id": "warmup-jog", "domain": "fitness", "text": "Describe a short warm-up routine before a jog."}
+{"task_id": "hydration", "domain": "health", "text": "Explain how much water an adult typically needs each day."}
+{"task_id": "sleep-hygiene", "domain": "health", "text": "Suggest habits that improve nighttime sleep quality."}
+{"task_id": "photosynthesis", "domain": "science", "text": "Explain how photosynthesis converts sunlight into energy."}
+{"task_id": "states-matter", "domain": "science", "text": "Compare solids, liquids, and gases."}
+{"task_id": "ph-scale", "domain": "science", "text": "Define what the pH scale measures."}
+{"task_id": "moon-phases", "domain": "astronomy", "text": "Explain why the moon appears to change shape over a month."}
+{"task_id": "seasons", "domain": "astronomy", "text": "Describe what causes the four seasons."}
+{"task_id": "bird-migration", "domain": "nature", "text": "Explain why some birds migrate long distances each year."}
+{"task_id": "bee-pollination", "domain": "nature", "text": "Describe how bees pollinate flowering plants."}
+{"task_id": "volcano", "domain": "earth", "text": "Explain how a volcano erupts."}
+{"task_id": "tides", "domain": "earth", "text": "Explain what causes ocean tides."}
+{"task_id": "printing-press", "domain": "history", "text": "Summarize why the printing press was historically important."}
+{"task_id": "silk-road", "domain": "history", "text": "Describe what the silk road was used for."}
+{"task_id": "percentages", "domain": "math", "text": "Explain how to calculate a percentage of a number."}
+{"task_id": "prime-numbers", "domain": "math", "text": "Define a prime number, with a few examples."}
+{"task_id": "active-passive", "domain": "language", "text": "Explain the difference between active and passive voice."}
+{"task_id": "topic-sentence", "domain": "writing", "text": "Give tips for writing a clear topic sentence."}
+{"task_id": "major-minor", "domain": "music", "text": "Explain the difference between a major and a minor chord."}
+{"task_id": "count-rhythm", "domain": "music", "text": "Describe how to count basic musical rhythm."}
+{"task_id": "color-wheel", "domain": "art", "text": "Explain how the color wheel helps mix paint colors."}
+{"task_id": "paper-crane", "domain": "art", "text": "Outline the steps to fold a paper crane."}
+{"task_id": "chess-castling", "domain": "games", "text": "Walk through the castling move in chess."}
+{"task_id": "soccer-offside", "domain": "games", "text": "Explain the offside rule in soccer."}
+{"task_id": "pack-light", "domain": "travel", "text": "Give tips for packing light for a week-long trip."}
+{"task_id": "jet-lag", "domain": "travel", "text": "Suggest ways to reduce jet lag after a long flight."}

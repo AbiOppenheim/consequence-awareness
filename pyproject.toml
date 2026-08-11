@@ -1,0 +1,39 @@
+[project]
+name = "consequence"
+version = "0.1.0"
+description = "Probing and steering a consequence-awareness direction in 7-8B chat models."
+readme = "README.md"
+requires-python = ">=3.10"
+
+# NOTE: deliberately NO transformer_lens and NO nnsight (see CLAUDE.md section 4).
+# The whole pipeline is plain HuggingFace transformers + PyTorch forward hooks.
+dependencies = [
+    "torch>=2.3",
+    "transformers>=4.44",
+    "accelerate>=0.30",
+    "huggingface-hub>=0.24",
+    "safetensors>=0.4",
+    "datasets>=2.20",
+    "scikit-learn>=1.5",
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "matplotlib>=3.8",
+    "pyyaml>=6.0",
+    "anthropic>=0.34",
+    "tqdm>=4.66",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.5", "ipykernel>=6.29", "jupyter>=1.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

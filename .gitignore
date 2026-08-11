@@ -1,24 +1,58 @@
-# environments
+# ---- OS junk ----
+.DS_Store
+
+# ---- environments ----
 .venv/
 venv/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+.uv/
+uv.lock
 
-# secrets
+# ---- secrets ----
 .env
 *token*
 *.key
 
-# large / regenerable artifacts
+# ---- models / weights (never commit) ----
 models/
 *.safetensors
 *.bin
 *.gguf
-activations/
-*.pt
-*.npz
+
+# ---- reference repos: cloned and run, never committed (Rule 1) ----
+external/*
+!external/.gitkeep
+
+# ---- raw downloads (datasets, benchmark suites) ----
+data/raw/*
+!data/raw/.gitkeep
+
+# ---- harmful prompt sets: regenerable, not published (Section 7) ----
+# refusal.jsonl is built verbatim from Arditi's public splits by
+# scripts/phase2_build_refusal.py, which IS committed — so the pipeline stays
+# reproducible without this repo redistributing a harmful-prompt list.
+data/contrast/refusal.jsonl
+
+# ---- artifacts ----
+# Heavy or potentially-harmful outputs are gitignored; the committed interface is the
+# sidecar .json per direction (Rule 2) plus the .gitkeep structure.
+#   *.pt / *.npz  -> weights, direction vectors, activation caches (regenerable, large)
+#   *.jsonl       -> generations & scores MAY contain harmful completions (Section 7)
+#   *.png / *.pdf -> regenerable figures
+artifacts/**/*.pt
+artifacts/**/*.npz
+artifacts/**/*.jsonl
+artifacts/**/*.png
+artifacts/**/*.pdf
+artifacts/**/*.csv
+# ...but keep the sidecars and the directory structure:
+!artifacts/**/*.json
+!.gitkeep
 
 # raw model outputs may contain harmful completions — never commit
 outputs_raw/
-results/raw/
+
+# ---- repo snapshot zips for Colab upload (regenerable, not source) ----
+*.zip

@@ -1,19 +1,27 @@
 #!/usr/bin/env python
 """Stage 05 (GPU): the causal sweep — generate under each condition.
 
-    python scripts/05_generate.py --eval fiction_jailbreaks --layer 14
+    python scripts/05_generate.py --eval fiction_jailbreaks --layer 18
 
 Conditions, all written to artifacts/generations/<eval>_L{layer}.jsonl:
-  - baseline                       (no intervention)
-  - steer_vc     at each alpha     (h += alpha * v_C, toward "real")
-  - steer_random at each alpha     (the mandatory null: same sweep, same seeds)
-  - steer_rhat   at each alpha     (refusal-direction baseline, if r_hat.pt exists)
+  - baseline                         no intervention
+  - steer_vc      at +alpha          h += alpha * v_C   (toward "real")  <- the hypothesis
+  - steer_vc_neg  at -alpha          h -= alpha * v_C   (toward "hypothetical")
+  - steer_random  at +alpha          the mandatory null, same sweep, same seeds
+  - steer_rhat    at +alpha          refusal-direction reference
 
-ONE variable per experiment: this script sweeps alpha at a fixed layer window. Change the
-layer on a separate run, never both at once.
+Why the NEGATIVE condition matters: a real behavioural direction should push refusal BOTH ways.
+If only +alpha moves anything, the likely explanation is "adding a large vector degrades the
+model", not "this direction controls refusal". Without it the sweep cannot tell those apart.
+
+ONE variable per experiment: this sweeps alpha at a fixed layer window. Change the layer on a
+separate run, never both at once. Resumable (Rule 4): conditions already present in the output
+are skipped unless --force.
 """
 
 import argparse
+import json
+from pathlib import Path
 
 import _bootstrap  # noqa: F401
 from consequence import acts as A
@@ -24,16 +32,32 @@ from consequence import io
 from consequence.config import load_config, resolve
 
 
+def done_keys(path: Path) -> set:
+    """(condition, alpha) pairs already generated, so a re-run resumes instead of duplicating."""
+    if not path.exists():
+        return set()
+    return {(r["condition"], r.get("alpha")) for r in D.load_jsonl(path)}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/qwen.yaml")
     ap.add_argument("--eval", default="fiction_jailbreaks", help="key under data: in the config")
-    ap.add_argument("--layer", type=int, required=True, help="which v_c_L{layer} to steer with")
+    ap.add_argument("--layer", type=int, required=True,
+                    help="steer with v_c_L{layer}, at the window centred on that layer")
+    ap.add_argument("--window", type=int, default=1,
+                    help="steer at layers [layer-w+1 .. layer]; 1 = only the extraction layer")
+    ap.add_argument("--force", action="store_true", help="regenerate conditions already present")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
-    layers = cfg["steer"]["layers"]
-    alphas = cfg["steer"]["alphas"]
+    alphas = [a for a in cfg["steer"]["alphas"] if a != 0]
+
+    # The steering window is DERIVED from --layer, never read from a separate config key: a
+    # direction extracted at L must be added back at L, or we steer along a vector measured
+    # somewhere else. (hooks.apply_hooks maps config layer L -> hidden_states[L].)
+    layers = list(range(args.layer - args.window + 1, args.layer + 1))
+
     gen_kwargs = dict(
         max_new_tokens=cfg["generate"]["max_new_tokens"],
         batch_size=cfg["generate"]["batch_size"],
@@ -41,39 +65,61 @@ def main() -> None:
         seed=cfg["seed"],
     )
 
-    prompts = [r["text"] if "text" in r else r["prompt"]
+    prompts = [r.get("text", r.get("prompt"))
                for r in D.load_jsonl(resolve(cfg["data"][args.eval]))]
     ddir = resolve(cfg["paths"]["directions"])
     out = resolve(cfg["paths"]["generations"]) / f"{args.eval}_L{args.layer}.jsonl"
+    if args.force and out.exists():
+        out.unlink()
+    already = done_keys(out)
 
-    v_c, _ = io.load_direction(ddir / f"v_c_L{args.layer}.pt")
-    rand, _ = io.load_direction(ddir / f"random_L{args.layer}.pt")
+    v_c, _ = io.load_direction(ddir / f"v_c_L{args.layer}")
+    rand, _ = io.load_direction(ddir / f"random_L{args.layer}")
     r_hat = None
-    if (ddir / "r_hat.pt").exists():
-        r_hat, _ = io.load_direction(ddir / "r_hat.pt")
+    rh_path = ddir / f"r_hat_L{args.layer}.pt"          # per-layer, minted from the gate cube
+    if rh_path.exists():
+        r_hat, _ = io.load_direction(rh_path)
+    else:
+        print(f"[warn] {rh_path.name} missing — skipping the r_hat reference condition")
+
+    print(f"[sweep] {len(prompts)} prompts | steer layers {layers} | alphas {alphas}")
+    n_cond = 1 + len(alphas) * (3 + (1 if r_hat is not None else 0))
+    print(f"[sweep] {n_cond} conditions -> ~{n_cond * len(prompts)} generations")
 
     model, tok = A.load_model(cfg["model"]["id"], cfg["model"]["dtype"])
 
-    G.run_condition(model, tok, prompts, out, condition="baseline", gen_kwargs=gen_kwargs)
-    print("[gen] baseline done")
-
-    steer_dirs = [("steer_vc", v_c), ("steer_random", rand)]
-    if r_hat is not None:
-        steer_dirs.append(("steer_rhat", r_hat))
+    if ("baseline", 0.0) not in already:
+        G.run_condition(model, tok, prompts, out, condition="baseline", gen_kwargs=gen_kwargs)
+        print("[gen] baseline done")
 
     for alpha in alphas:
-        if alpha == 0:
-            continue
-        for name, vec in steer_dirs:
+        conds = [
+            ("steer_vc", v_c, +alpha),          # toward "real" — the hypothesis
+            ("steer_vc_neg", v_c, -alpha),      # toward "hypothetical" — must move the other way
+            ("steer_random", rand, +alpha),     # the null
+        ]
+        if r_hat is not None:
+            conds.append(("steer_rhat", r_hat, +alpha))
+        for name, vec, a in conds:
+            if (name, a) in already:
+                print(f"[skip] {name} alpha={a} already generated")
+                continue
             G.run_condition(
-                model, tok, prompts, out, condition=name, direction=name.split("_")[1],
-                layers=layers, alpha=alpha,
-                hook_factory=lambda v=vec, a=alpha: H.steer_hook(v, a),
+                model, tok, prompts, out, condition=name, direction=name.split("_", 1)[1],
+                layers=layers, alpha=a,
+                hook_factory=lambda v=vec, aa=a: H.steer_hook(v, aa),
                 gen_kwargs=gen_kwargs,
             )
-            print(f"[gen] {name} alpha={alpha} done")
+            print(f"[gen] {name} alpha={a:+g} done")
 
-    print(f"[write] {out}")
+    meta = out.with_suffix(".meta.json")
+    meta.write_text(json.dumps({
+        "eval": args.eval, "model_id": cfg["model"]["id"], "direction_layer": args.layer,
+        "steer_layers": layers, "alphas": alphas, "seed": cfg["seed"],
+        "n_prompts": len(prompts), "conditions": ["baseline", "steer_vc", "steer_vc_neg",
+                                                  "steer_random"] + (["steer_rhat"] if r_hat else []),
+    }, indent=2))
+    print(f"[write] {out}\n[write] {meta}")
 
 
 if __name__ == "__main__":

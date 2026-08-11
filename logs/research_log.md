@@ -4,6 +4,71 @@ Newest entries at the top. One entry per working session (course requirement, CL
 
 ---
 
+## 2026-08-11 — PHASE 3 VERIFIED + PHASE 4: v_C is distinct from BOTH r_hat and persona
+
+All CPU against cached activations (persona sets needed one ~3 min GPU pass to cache).
+
+### Phase 3 red-team (notebook 10b) — the result survives
+
+- **Per-route generalization is UNIFORM.** 19 of 20 held-out routes AUC >= 0.877, median ~0.94.
+  Only `sandbox` weak (0.736) — semantically reasonable, a sandbox arguably *is* a real system.
+  The headline is not an average masking a few strong routes.
+- **Held-out RISES with depth** (unfitted v_C): 0.875 (L8) -> 0.917 (L14) -> 0.932 (L18) ->
+  **0.955 (L22)** -> 0.947 (L24); probe 0.933 -> 0.992. **This retires the earlier "flat layer
+  curve => shallow lexical feature" concern, which was based on TRAIN-CV (flat at 0.996-0.999);
+  held-out is not flat.** A surface-lexical feature would not improve with depth.
+- **Stronger text baselines (held-out):** TF-IDF unigram 0.787, **uni+bigram 0.847**, char
+  3-5gram 0.771. Like-for-like (both fitted): probe **0.973** vs best text **0.847**.
+  So v_C wins clearly, but **surface form reaches ~85% of the way — state the number, do not
+  claim a categorical "beyond surface vocabulary."**
+- **Random-direction null, 100 draws:** mean 0.479, 5-95% [0.263, 0.698]. Random directions can
+  reach 0.70, so a wide null; 0.932 is comfortably outside it.
+- Train-CV selected **L18** but held-out peaks at L22. Unbiased selection landing slightly short
+  of optimal is what honest selection looks like. **Headline stays L18 = 0.932**; the layer curve
+  is supporting evidence, not licence to upgrade the number.
+
+### Phase 4 geometry (v_MP = our reimplementation of Zhong's compliant_v2 model_persona)
+
+At L18, against a random-direction null band of p95 = 0.032:
+
+| pair | cosine |
+|---|---|
+| v_C . r_hat | **+0.083** (rises to +0.209 by L24) |
+| v_C . v_MP (system framing) | **+0.287** |
+| v_C . v_MP (user-turn framing) | **+0.338** |
+| v_MP(sys) . v_MP(user-turn) | **0.908** |
+| r_hat . v_MP | -0.225 at L18, **-0.414 by L24** |
+
+- **Both deflationary explanations fail.** v_C is neither r_hat relabeled (cos 0.083) nor the
+  persona direction relabeled (cos ~0.31, i.e. ~10% shared variance). Claim 1 is supported for
+  this contrast set and model.
+- **The 0.908 framing agreement matters**: building v_MP with the instruction in the system
+  prompt vs the user turn gives essentially the same axis, so cos(v_C, v_MP) is not an artifact
+  of prompt structure — the confound the two-framing design was built to rule out.
+- **Unplanned validation of our v_MP.** r_hat . v_MP grows increasingly NEGATIVE with depth
+  (-0.414 at L24): compliant persona and refusal are anti-aligned late in the stack, which is
+  exactly Zhong's "refusal lives downstream of persona". Since we had no reference vector for
+  v_MP, this is independent evidence the reimplementation captures something real, and partly
+  closes the limitation logged earlier.
+
+### Caveats to carry into the write-up
+- cos(v_C, v_MP) ~ 0.29-0.34 is **not** zero. Say "distinct with modest overlap", not orthogonal.
+- Still **correlational**. Nothing here shows the model USES v_C. Phase 5 is the causal test.
+- Scope to this real-vs-hypothetical contrast set, Qwen2.5-7B, and these framings (Kirch et al.).
+- On Colab the persona *builder* failed (Zhong's repo not cloned there, no traits.zip); it worked
+  because persona.jsonl/persona_ut.jsonl are committed. Numbers are valid; regeneration needs
+  their repo cloned.
+
+### Code fix this session (pre-sweep, caught before any GPU spend)
+`hooks.apply_hooks` steered at the **wrong layer**: our convention is config layer L =
+hidden_states[L] = cache index L-1, but a post-forward hook on `blocks[L]` rewrites block L's
+OUTPUT = hidden_states[L+1]. Verified with a stub decoder stack (steering "at L4" first changed
+hs[5]); now hooks `blocks[L-1]` with a range check, re-verified at four layers. Had this shipped,
+every steering result would have been one layer off target.
+
+**Next:** Phase 5 — the causal sweep. `scripts/phase5_build_eval.py` downloads XSTest (safe,
+committed) and published fiction/role-play attacks (gitignored, used verbatim).
+
 ## 2026-08-11 — Phase 4 prep: Zhong's repo is a partial release; v_MP rebuilt from their spec
 
 **Finding (scoping read, no GPU).** `violazhong/refusal-downstream-persona` **cannot produce

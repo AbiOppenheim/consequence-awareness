@@ -50,6 +50,8 @@ roughly opposite in spirit to r_hat (harmful - harmless). Compare magnitudes.
 baselines, 100-draw null) is written but **not yet run**. The TF-IDF result is what decides how
 strongly the Phase 3 claim can be worded.
 
+---
+
 ## 2026-08-11 — PHASE 3: v_C generalizes to held-out framing routes (correlational)
 
 Ran on the same Colab session as the gate; extraction + probes are CPU against the cached

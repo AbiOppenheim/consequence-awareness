@@ -4,6 +4,53 @@ Newest entries at the top. One entry per working session (course requirement, CL
 
 ---
 
+## 2026-08-11 — PHASE 2 GATE PASSED: our r_hat reproduces Arditi's on Qwen2.5
+
+**Ran on Colab Pro (L4 24GB), not a pod.** Steps: cache activations for the 256-prompt refusal
+set with our `01_cache_acts.py`; run Arditi's unchanged `generate_directions` on the SAME prompts
+via our Qwen2.5 adapter; compare on CPU. Notebook: `notebooks/phase2_rhat_gate_colab.ipynb`.
+
+**Result — the gate:**
+
+    cos(our r_hat, Arditi r_hat) at offset +1 = 0.9999   (mean over 27 comparable layers)
+
+**Supporting checks (all run before believing it):**
+- **Offset discrimination:** +1 = 0.9999 vs offset 0 = 0.7412, −1 = 0.5800, +2 = 0.7383,
+  far-apart layers (|Δ|>3) = 0.1427. The comparison *could* have come out low; it didn't.
+- **Layer indexing confirmed twice.** Our stored `k` = `hidden_states[k+1]` (block *output*);
+  Arditi's `l` = `hidden_states[l]` (block *input*, via forward pre-hook) → offset +1. Two
+  independent confirmations: (a) Arditi's layer 0 has **exactly zero** norm, because it is the raw
+  embedding and every prompt ends with the same chat-template token, so mean(harmful) −
+  mean(harmless) = 0 there (it produced a nan until we excluded it); (b) offset 0 (0.7412) equals
+  our own adjacent-layer self-similarity (0.7412) to 4 dp, which is forced iff the mapping holds.
+- **Permutation null (200 shuffles):** true 0.9999 vs null mean 0.0134, sd 0.3959, max 0.8058,
+  **p = 0.0000** — the true labels beat every one of 200 permutations.
+- **Outlier dominance:** top-10 of 3584 dims hold only 6.6% of the direction — distributed
+  feature, not a few rogue dimensions.
+- Random-*direction* noise floor |cos| p95 = 0.0325.
+
+**Methodological corrections made (worth remembering):**
+- A **single** permutation with a hard threshold was a bad test: the permutation null is wide
+  (sd ≈ 0.40) though centered at ~0, so one draw of 0.38 looked alarming and was noise. Fixed the
+  notebook to report the 200-shuffle distribution + p-value. **A null needs its distribution, not
+  a threshold.**
+- The **z-score (2.5) is the wrong statistic** here — the null is sign-symmetric and non-Gaussian.
+  Use the p-value / null max.
+- Random-*direction* floor (0.0325) ≠ random-*label-split* null (sd 0.40). Do not conflate them;
+  the label-split null is the right control for a diff-in-means claim.
+
+**What this licenses and what it does NOT.** Our activation caching, token position, layer
+indexing, and chat-template handling are correct → we can trust `v_C` extracted by the same code.
+It says **nothing** about jailbreaks, fiction-framing, or whether `v_C` exists. This is a methods
+footnote, not a finding — the gate is near-tautological by design (both sides compute the same
+math on the same prompts), so it catches gross plumbing errors only.
+
+**Next (Phase 3, mostly CPU):** cache the consequence set (2000 rows) while the model is warm →
+`02_extract_directions.py` for `v_C` per layer + random nulls → `03_probe.py` with the group-wise
+split, reporting held-out-framing accuracy against the BoW baseline (held-out AUC 0.753).
+
+---
+
 ## 2026-08-07 — Consequence set rebuilt by pair-sampling (140 framings)
 
 **Context:** framings expanded to **140** (real/train 50, hypo/train 50, real/heldout 20,

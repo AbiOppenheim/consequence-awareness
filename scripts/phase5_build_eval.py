@@ -44,13 +44,14 @@ FICTION_MARKERS = re.compile(
     r"character|act as|you are now|simulation|simulate|movie|script|scene)\b", re.I)
 
 
-def _load_hf(repo_id: str, **kw):
+def _load_hf(repo_id: str, *args, **kw):
+    """load_dataset(repo_id, [config_name], **kw) with a readable failure message."""
     try:
         from datasets import load_dataset
     except ImportError:
         raise SystemExit("pip install datasets")
     try:
-        return load_dataset(repo_id, **kw)
+        return load_dataset(repo_id, *args, **kw)
     except Exception as e:
         raise SystemExit(f"could not download {repo_id}: {e}\n"
                          "check network / `huggingface-cli login` if the dataset is gated.")
@@ -64,18 +65,34 @@ def write(rows, path: Path) -> None:
     print(f"[write] {len(rows)} rows -> {path.relative_to(REPO_ROOT)}")
 
 
+# The HF mirror (walledai/xstest) is GATED and 401s without a token. The authors' own CSV is
+# public, so we read that instead — no account, no login, no extra dependency.
+XSTEST_CSV = "https://raw.githubusercontent.com/paul-rottger/xstest/main/xstest_prompts.csv"
+
+
 def build_xstest() -> None:
-    ds = _load_hf("walledai/xstest", split="test")
-    col = "prompt" if "prompt" in ds.column_names else ds.column_names[0]
+    import csv
+    import io
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(XSTEST_CSV, timeout=60) as r:
+            text = r.read().decode("utf-8")
+    except Exception as e:
+        raise SystemExit(f"could not download XSTest from {XSTEST_CSV}: {e}")
+
     rows = []
-    for i, r in enumerate(ds):
-        # XSTest ships safe prompts and (in some versions) unsafe contrast prompts; keep SAFE.
-        t = str(r.get("type", "safe"))
-        if "contrast" in t or t.startswith("unsafe"):
+    for i, r in enumerate(csv.DictReader(io.StringIO(text))):
+        # XSTest ships SAFE prompts that merely look risky, plus unsafe contrast prompts.
+        # Only the safe ones are the over-refusal control — the unsafe ones SHOULD be refused.
+        if (r.get("label") or "").strip().lower() != "safe":
             continue
-        rows.append({"id": f"xstest_{i}", "text": r[col], "source": "xstest",
-                     "attack_family": "over_refusal_control", "type": t})
+        rows.append({"id": f"xstest_{r.get('id', i)}", "text": r["prompt"], "source": "xstest",
+                     "attack_family": "over_refusal_control", "type": r.get("type", "")})
+    if not rows:
+        raise SystemExit("no safe XSTest prompts parsed — check the CSV schema")
     write(rows, EVAL / "xstest.jsonl")
+    print("  (safe prompts only — the unsafe contrast half is deliberately excluded)")
 
 
 def build_jailbreaks(source: str, limit: int) -> None:
@@ -118,10 +135,27 @@ def main() -> None:
 
     if not (args.xstest or args.jailbreaks or args.all):
         ap.error("choose --xstest, --jailbreaks, or --all")
-    if args.xstest or args.all:
-        build_xstest()
-    if args.jailbreaks or args.all:
-        build_jailbreaks(args.source, args.limit)
+
+    # The two sets are independent, so one failing must not abort the other: XSTest failing
+    # previously took the jailbreak build down with it, leaving neither file on disk.
+    failed = []
+    for want, name, fn in ((args.xstest or args.all, "xstest", build_xstest),
+                           (args.jailbreaks or args.all, "fiction_jailbreaks",
+                            lambda: build_jailbreaks(args.source, args.limit))):
+        if not want:
+            continue
+        try:
+            fn()
+        except SystemExit as e:
+            failed.append(name)
+            print(f"[FAIL] {name}: {e}")
+
+    if failed:
+        raise SystemExit(
+            f"\n{len(failed)} set(s) failed: {failed}\n"
+            "Note: XSTest is the guard on the causal claim — without it, 'steering restores\n"
+            "refusal' is unsupported, because the model may simply be refusing everything."
+        )
 
 
 if __name__ == "__main__":

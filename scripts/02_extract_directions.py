@@ -4,11 +4,14 @@
     python scripts/02_extract_directions.py --dataset consequence
 
 For each layer in extract.layer_sweep, computes v = mean(real) - mean(hypo) over the cached
-activations and saves artifacts/directions/v_c_L{layer}.pt + a sidecar .json (Rule 2).
+activations of the TRAIN templates only (--split, default "train") and saves
+artifacts/directions/v_c_L{layer}.pt + a sidecar .json (Rule 2).
 Also writes a random-direction null (random_L{layer}.pt) with the same shape and seed.
 """
 
 import argparse
+
+import numpy as np
 
 import _bootstrap  # noqa: F401
 from consequence import acts as A
@@ -21,6 +24,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/qwen.yaml")
     ap.add_argument("--dataset", default="consequence")
+    ap.add_argument("--split", default="train", choices=["train", "all"],
+                    help="rows to extract from. 'train' is the default and the only setting "
+                         "that keeps the held-out templates untouched (CLAUDE.md §2).")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -29,12 +35,27 @@ def main() -> None:
     acts, labels, meta = A.load_acts(acts_path)  # acts [n, n_layers, d]
     out_dir = resolve(cfg["paths"]["directions"])
 
+    # Held-out templates must not touch the direction: a v_C built from them and then scored
+    # on them is not a generalization test. Datasets with no split column (refusal, persona)
+    # have no held-out reserve to protect, so they extract from everything.
+    if args.split == "train" and "splits" in meta:
+        keep = np.array(str(meta["splits"]).split(",")) == "train"
+        split_used = "train"
+    else:
+        if args.split == "train":
+            print(f"[extract] no split metadata in {acts_path.name}: using all rows")
+        keep = np.ones(len(labels), dtype=bool)
+        split_used = "all"
+    acts, labels = acts[keep], labels[keep]
+    print(f"[extract] {args.dataset}: {keep.sum()}/{len(keep)} rows (split={split_used})")
+
     common = {
         "model_id": cfg["model"]["id"],
         "token_position": cfg["acts"]["token_position"],
         "source_contrast": str(cfg["data"][args.dataset]),
         "n_pairs": int((labels == 1).sum()),
         "seed": cfg["seed"],
+        "split": split_used,
     }
 
     for layer in cfg["extract"]["layer_sweep"]:

@@ -67,6 +67,10 @@ def load_direction(path: str | Path) -> tuple[torch.Tensor, dict[str, Any]]:
     """Load a direction and its sidecar. Errors loudly if the sidecar is missing."""
     path = Path(path).with_suffix(".pt")
     sidecar_path = path.with_suffix(".json")
+    if not path.exists():
+        raise FileNotFoundError(
+            f"{path} does not exist — the stage that mints it has not been run"
+        )
     if not sidecar_path.exists():
         raise FileNotFoundError(
             f"no sidecar for {path.name} — per Rule 2 this .pt should be deleted, not used"

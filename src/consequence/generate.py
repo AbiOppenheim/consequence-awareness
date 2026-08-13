@@ -19,18 +19,39 @@ from .hooks import apply_hooks
 @torch.no_grad()
 def generate(model, tok, prompts: list[str], *, max_new_tokens: int = 256,
              batch_size: int = 16, do_sample: bool = False, seed: int = 0) -> list[str]:
-    """Greedy (or sampled) generation for a batch of raw prompts; returns completions only."""
+    """Greedy (or sampled) generation for a batch of raw prompts; returns completions only.
+
+    LEFT padding is mandatory here, and only here. A decoder-only model continues from the last
+    token of the sequence, so with right padding every prompt shorter than the longest in its
+    batch continues from `<pad><pad>…` instead of from its own final token — the completions
+    come out empty or unrelated, and nothing raises. transformers warns about it, once per
+    call, in a wall of loading bars.
+
+    It must NOT be set globally on the tokenizer, because `acts.cache_activations` needs the
+    opposite: a plain forward pass takes position_ids = arange(seq_len), so left padding would
+    shift every real token's RoPE position by the number of pads and quietly corrupt the
+    activations. Right padding puts the real tokens at positions 0..n-1 (correct) and the mask
+    fallback there finds the true last token. `generate()` is the one path that rebuilds
+    position_ids from the attention mask, which is exactly why it wants the other convention.
+    """
     torch.manual_seed(seed)
     completions = []
-    for start in range(0, len(prompts), batch_size):
-        batch = [_render(tok, p) for p in prompts[start : start + batch_size]]
-        enc = tok(batch, return_tensors="pt", padding=True).to(model.device)
-        out = model.generate(
-            **enc, max_new_tokens=max_new_tokens, do_sample=do_sample,
-            pad_token_id=tok.pad_token_id or tok.eos_token_id,
-        )
-        gen = out[:, enc["input_ids"].shape[1]:]  # strip the prompt tokens
-        completions.extend(tok.batch_decode(gen, skip_special_tokens=True))
+    original_side = tok.padding_side
+    tok.padding_side = "left"
+    try:
+        for start in range(0, len(prompts), batch_size):
+            batch = [_render(tok, p) for p in prompts[start : start + batch_size]]
+            enc = tok(batch, return_tensors="pt", padding=True).to(model.device)
+            out = model.generate(
+                **enc, max_new_tokens=max_new_tokens, do_sample=do_sample,
+                pad_token_id=tok.pad_token_id or tok.eos_token_id,
+            )
+            # Left padding makes every row's prompt end at the same index, so one slice is
+            # correct for the whole batch.
+            gen = out[:, enc["input_ids"].shape[1]:]
+            completions.extend(tok.batch_decode(gen, skip_special_tokens=True))
+    finally:
+        tok.padding_side = original_side
     return completions
 
 

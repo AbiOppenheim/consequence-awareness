@@ -163,8 +163,10 @@ def main() -> None:
     meta.write_text(json.dumps({
         "eval": args.eval, "model_id": cfg["model"]["id"], "direction_layer": layer,
         "steer_layers": layers, "alphas": alphas, "seed": cfg["seed"],
-        "n_prompts": len(prompts), "conditions": ["baseline", "steer_vc", "steer_vc_neg",
-                                                  "steer_random"] + (["steer_rhat"] if r_hat else []),
+        "n_prompts": len(prompts),
+        # `if r_hat` on a tensor raises: truthiness of a multi-element tensor is ambiguous.
+        "conditions": ["baseline", "steer_vc", "steer_vc_neg", "steer_random"]
+                      + (["steer_rhat"] if r_hat is not None else []),
     }, indent=2))
     print(f"[write] {out}\n[write] {meta}")
 

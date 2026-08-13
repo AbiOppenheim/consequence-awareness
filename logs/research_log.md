@@ -62,6 +62,32 @@ survive, and that knockout zeroes the component. Verified it fails against the o
 implementation. Committed this time, not ad-hoc: run it before any sweep. The smoke test earned
 its place — this would have cost an hour of GPU and produced generations that looked fine.
 
+**Third generation bug, and the worst one: RIGHT padding in `generate()`.** A decoder-only model
+continues from the last token of the sequence, so every prompt shorter than the longest in its
+batch was continuing from `<pad>` instead of from its own final token. Nothing raises;
+transformers warns once per call, buried in loading bars. Reproduced on a stub: with the old
+code a batch of three prompts returns **`['', 'ooo', '']`** — only the longest prompt generates
+at all.
+
+**This bug would have manufactured a positive result.** Empty completions from a steered
+condition read as refusal to any judge, so "steering toward real restores refusal" would have
+come out strongly, at every alpha, for `v_C` *and* the random null — and the null would have
+looked equally good, which is the one thing that might have given it away. Fixed by setting
+`padding_side="left"` inside `generate()` and restoring it after.
+
+Deliberately NOT set globally on the tokenizer: `acts.cache_activations` needs the opposite.
+A plain forward pass takes `position_ids = arange(seq_len)`, so left padding would shift every
+real token's RoPE position by the number of pads. Right padding puts real tokens at 0..n-1 and
+the existing mask fallback finds the true last token — **the cached activations and the 0.9999
+gate are unaffected and stay valid.** `generate()` is the one path that rebuilds position_ids
+from the attention mask, which is exactly why it wants the other convention.
+`scripts/test_generate.py` pins this with a stub that echoes the last input token; verified it
+fails against the old code.
+
+Also fixed: `["steer_rhat"] if r_hat else []` in the sweep's meta sidecar — truthiness of a
+multi-element tensor raises. It crashed *after* all 15 smoke generations, so it cost nothing,
+but it would have wasted the full sweep's model-load time.
+
 **⚠️ Carried over and still open — the Phase 3/4 numbers need one CPU re-run.** Commit `b7ede1c`
 (2026-08-12) fixed stage 02 to extract `v_C` from train templates only; before that it did
 difference-in-means over **all 2000 rows, held-out included**, and section 10 then scored that

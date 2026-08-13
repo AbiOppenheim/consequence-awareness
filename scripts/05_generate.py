@@ -29,6 +29,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+import torch
+
 import _bootstrap  # noqa: F401
 from consequence import acts as A
 from consequence import data as D
@@ -123,6 +125,9 @@ def main() -> None:
     ap.add_argument("--window", type=int, default=1,
                     help="steer at layers [layer-w+1 .. layer]; 1 = only the extraction layer")
     ap.add_argument("--force", action="store_true", help="regenerate conditions already present")
+    ap.add_argument("--batch-size", type=int, default=None,
+                    help="override generate.batch_size. The first thing to lower on a CUDA OOM; "
+                         "it changes throughput, not the greedy completions.")
     ap.add_argument("--alphas", nargs="+", default=["auto"],
                     help="'auto' (default) reads the ladder calibrated by step 11, or pass "
                          "values e.g. --alphas 12 24 48 96. Either way they land in the "
@@ -144,7 +149,7 @@ def main() -> None:
 
     gen_kwargs = dict(
         max_new_tokens=cfg["generate"]["max_new_tokens"],
-        batch_size=cfg["generate"]["batch_size"],
+        batch_size=args.batch_size or cfg["generate"]["batch_size"],
         do_sample=cfg["generate"]["do_sample"],
         seed=cfg["seed"],
     )
@@ -172,6 +177,37 @@ def main() -> None:
 
     model, tok = A.load_model(cfg["model"]["id"], cfg["model"]["dtype"])
 
+    try:
+        run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, rand, r_hat)
+    except torch.cuda.OutOfMemoryError:
+        done = len(done_keys(out, len(prompts)))
+        raise SystemExit(
+            f"\nCUDA OUT OF MEMORY at batch_size={gen_kwargs['batch_size']}.\n"
+            f"  {done} condition(s) completed and are safe on disk — a re-run resumes.\n"
+            "  Fix, in order of preference:\n"
+            "    1. a bigger card (Runtime > Change runtime type > L4). A 7-8B model in bf16 "
+            "needs ~15 GB of\n       weights before the KV cache, so a 15 GB T4 offloads to "
+            "CPU and cannot hold a batch.\n"
+            "    2. --batch-size 4 (then 2). Throughput drops; the greedy completions do not "
+            "change.\n"
+            "    3. lower generate.max_new_tokens — but that changes what the judge sees, so "
+            "record it."
+        )
+
+    meta = out.with_suffix(".meta.json")
+    meta.write_text(json.dumps({
+        "eval": args.eval, "model_id": cfg["model"]["id"], "direction_layer": layer,
+        "steer_layers": layers, "alphas": alphas, "seed": cfg["seed"],
+        "n_prompts": len(prompts),
+        # `if r_hat` on a tensor raises: truthiness of a multi-element tensor is ambiguous.
+        "conditions": ["baseline", "steer_vc", "steer_vc_neg", "steer_random"]
+                      + (["steer_rhat"] if r_hat is not None else []),
+    }, indent=2))
+    print(f"[write] {out}\n[write] {meta}")
+
+
+def run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, rand, r_hat):
+    """Every condition in the sweep, skipping the ones already complete."""
     if ("baseline", 0.0) not in already:
         G.run_condition(model, tok, prompts, out, condition="baseline", gen_kwargs=gen_kwargs)
         print("[gen] baseline done")
@@ -196,16 +232,6 @@ def main() -> None:
             )
             print(f"[gen] {name} alpha={a:+g} done")
 
-    meta = out.with_suffix(".meta.json")
-    meta.write_text(json.dumps({
-        "eval": args.eval, "model_id": cfg["model"]["id"], "direction_layer": layer,
-        "steer_layers": layers, "alphas": alphas, "seed": cfg["seed"],
-        "n_prompts": len(prompts),
-        # `if r_hat` on a tensor raises: truthiness of a multi-element tensor is ambiguous.
-        "conditions": ["baseline", "steer_vc", "steer_vc_neg", "steer_random"]
-                      + (["steer_rhat"] if r_hat is not None else []),
-    }, indent=2))
-    print(f"[write] {out}\n[write] {meta}")
 
 
 if __name__ == "__main__":

@@ -20,6 +20,32 @@ import torch
 DTYPES = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
 
 
+def report_gpu(min_gib: float = 20.0) -> float:
+    """Print the card and its memory, and warn early when a 7-8B model will not fit.
+
+    Colab hands out whatever accelerator is free, so a reconnect can silently move the work
+    from an L4 (22.5 GiB) to a T4 (14.6 GiB). A 7-8B model in bf16 is ~15 GB of weights alone,
+    which does not fit on a T4 at all: `device_map="auto"` then offloads layers to CPU without
+    complaint, generation crawls, and the run dies of CUDA OOM inside scaled_dot_product_
+    attention several minutes later — a traceback that says nothing about the real cause.
+    Cheaper to say it here, before the weights download.
+    """
+    if not torch.cuda.is_available():
+        print("[gpu] no CUDA device visible — this stage needs one")
+        return 0.0
+    props = torch.cuda.get_device_properties(0)
+    total = props.total_memory / 2**30
+    print(f"[gpu] {props.name}, {total:.1f} GiB")
+    if total < min_gib:
+        print(f"[gpu] WARNING: {total:.1f} GiB is not enough for a 7-8B model in bf16 "
+              "(~15 GB of weights, before the KV cache).\n"
+              "[gpu]   accelerate will offload layers to CPU: very slow, and generation will "
+              "OOM at batch 16.\n"
+              "[gpu]   Fix: Runtime > Change runtime type > L4. Failing that, pass a much "
+              "smaller --batch-size and expect it to crawl.")
+    return total
+
+
 def load_model(model_id: str, dtype: str = "bfloat16"):
     """Load a frozen chat model + tokenizer in the requested precision.
 
@@ -28,6 +54,7 @@ def load_model(model_id: str, dtype: str = "bfloat16"):
     """
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
+    report_gpu()
     tok = AutoTokenizer.from_pretrained(model_id)
     model = AutoModelForCausalLM.from_pretrained(
         model_id, torch_dtype=DTYPES[dtype], device_map="auto"

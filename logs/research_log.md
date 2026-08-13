@@ -45,6 +45,23 @@ to agree at offset +1): all six steps run; re-runs are no-ops; a param change re
 that step; a layer re-selection cascades; editing `probe.py` invalidates the steps that import
 it and not the gate; the split guard fires. Fixture deleted, nothing written into `artifacts/`.
 
+**Second steering bug, caught by the smoke test (section 16) before the sweep.** `steer_hook`
+and `knockout_hook` assumed a decoder block returns `(hidden_states, ...)`. Transformers ~4.54+
+returns a **bare tensor**, so `output[0]` did not raise — it silently took the first **batch
+row** — and the tuple the hook returned surfaced as `AttributeError: 'tuple' object has no
+attribute 'dtype'` three layers downstream inside Qwen2's `input_layernorm`, nowhere near the
+hook. Fixed by dispatching on the container type (`_edit_resid`); it must be an isinstance
+check, not a try/except, because the tensor path fails silently rather than raising.
+
+This is the second bug in the same 15 lines (the first steered one layer off, logged 08-11), and
+both were invisible to the ad-hoc stub used to verify the first — **that stub returned tuples,
+so it tested the assumption instead of challenging it.** `scripts/test_hooks.py` now runs the
+hooks against BOTH block conventions on a stub stack, asserting on which hidden_states layer
+actually moved, that the shift is identical across batch rows, that shape and container type
+survive, and that knockout zeroes the component. Verified it fails against the old
+implementation. Committed this time, not ad-hoc: run it before any sweep. The smoke test earned
+its place — this would have cost an hour of GPU and produced generations that looked fine.
+
 **⚠️ Carried over and still open — the Phase 3/4 numbers need one CPU re-run.** Commit `b7ede1c`
 (2026-08-12) fixed stage 02 to extract `v_C` from train templates only; before that it did
 difference-in-means over **all 2000 rows, held-out included**, and section 10 then scored that

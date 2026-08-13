@@ -1,8 +1,7 @@
 """Forward-hook interventions: steering (activation addition) and projection knockout.
 
 A PyTorch forward hook is just a callback that fires after a module runs and may replace its
-output. HuggingFace decoder blocks return a tuple whose first element is the residual stream;
-we edit element 0 and pass the rest through unchanged.
+output. We edit the residual stream in a decoder block's output and pass anything else through.
 
 These 2 interventions ARE the causal test. Both must always be run against a random-direction
 null in the same sweep (CLAUDE.md section 2).
@@ -15,6 +14,23 @@ from contextlib import contextmanager
 import torch
 
 
+def _edit_resid(output, fn):
+    """Apply fn to the residual stream in a decoder block's output, preserving its container.
+
+    HuggingFace decoder blocks USED to return `(hidden_states, ...)` and now return a bare
+    tensor (transformers ~4.54+). Both conventions are in the wild, so handle both.
+
+    This has to be an isinstance check rather than a try/except, because the failure is silent
+    in the dangerous direction: `output[0]` on a TENSOR does not raise — it returns the first
+    row of the batch. Assuming the tuple form against the new API therefore steers a
+    wrong-shaped slice and hands the next layer a tuple, which is how this surfaced: an
+    AttributeError three layers downstream in Qwen2's input_layernorm, nowhere near the hook.
+    """
+    if isinstance(output, tuple):
+        return (fn(output[0]), *output[1:])
+    return fn(output)
+
+
 def steer_hook(v: torch.Tensor, alpha: float):
     """h <- h + alpha * v   (add at all positions in the block's output).
 
@@ -22,9 +38,9 @@ def steer_hook(v: torch.Tensor, alpha: float):
     during a fiction-framed jailbreak? v is expected unit-normalized; alpha carries the scale.
     """
     def hook(module, inputs, output):
-        resid = output[0]
-        resid = resid + alpha * v.to(resid.dtype).to(resid.device)
-        return (resid, *output[1:])
+        def add(resid):
+            return resid + alpha * v.to(resid.dtype).to(resid.device)
+        return _edit_resid(output, add)
     return hook
 
 
@@ -37,10 +53,10 @@ def knockout_hook(v: torch.Tensor):
     v_hat = v.float() / v.float().norm()
 
     def hook(module, inputs, output):
-        resid = output[0]
-        vh = v_hat.to(resid.dtype).to(resid.device)
-        proj = (resid @ vh).unsqueeze(-1) * vh
-        return (resid - proj, *output[1:])
+        def project_out(resid):
+            vh = v_hat.to(resid.dtype).to(resid.device)
+            return resid - (resid @ vh).unsqueeze(-1) * vh
+        return _edit_resid(output, project_out)
     return hook
 
 

@@ -5,4 +5,5 @@ a unit vector in R^d_model. Modules here never import anything under external/ (
 Rule 1); reference repos communicate only by writing a .pt into artifacts/directions/.
 """
 
-__all__ = ["config", "io", "acts", "directions", "hooks", "generate", "probe", "judge"]
+__all__ = ["config", "io", "results", "acts", "directions", "hooks", "generate", "probe",
+           "judge"]

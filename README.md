@@ -52,18 +52,35 @@ pip install -e .                       # or: pip install numpy scikit-learn pyya
 python scripts/00_build_consequence.py         # cross-product benign_tasks.jsonl × framings.jsonl
 ```
 
+Each research step is one script. Steps that cost real time store their numbers in
+`artifacts/results/<step>.json`, keyed on a hash of their inputs, parameters and code
+(`consequence.results`) — **re-running a step with nothing changed is a no-op that reprints the
+saved numbers**, and a step whose dataset, selected layer or analysis code moved underneath it
+recomputes and says which. `notebooks/phase2_3_gate_and_vc_colab.ipynb` runs these steps and
+renders their stored results; it computes nothing itself.
+
 | stage | script | GPU? | reads → writes |
 |---|---|---|---|
-| 01 | `01_cache_acts.py` | ✅ | contrast jsonl → `artifacts/activations/*.npz` |
-| 02 | `02_extract_directions.py` | — | activations → `artifacts/directions/v_c_L*.pt` (+ random null) |
-| 03 | `03_probe.py` | — | activations → held-out-template accuracy per layer |
-| 04 | `04_geometry.py --layer L` | — | directions → cosines vs `r̂`/`v_MP` + random null band |
-| 05 | `05_generate.py --layer L` | ✅ | eval prompts under steer/knockout → `generations/*.jsonl` |
+| 01 | `01_cache_acts.py --dataset D` | ✅ | contrast jsonl → `activations/D_*.npz` |
+| 02 | `02_extract_directions.py --dataset D [--kind v_mp]` | — | activations → `directions/{v_c,v_mp_D}_L*.pt` (+ random null) |
+| 02b | `02b_gate.py` | — | our + Arditi's refusal dirs → `results/gate.json`, `directions/r_hat_L*.pt` |
+| 03 | `03_probe.py` | — | activations → `results/layer_select.json` (**train templates only**) |
+| 04 | `04_geometry.py` | — | directions → `results/geometry.json` (cosines vs `r̂`/`v_MP` + null band) |
+| 09 | `09_heldout.py` | — | held-out reveal → `results/heldout.json` (**run once**) |
+| 10 | `10_redteam_heldout.py` | — | per-route, per-layer, TF-IDF, 100-draw null → `results/heldout_redteam.json` |
+| 11 | `11_calibrate_alpha.py` | — | residual norms → `results/alpha_ladder.json` |
+| 05 | `05_generate.py --eval E` | ✅ | eval prompts under steer/knockout → `generations/*.jsonl` |
 | 06 | `06_judge.py` | — | generations → refusal/bypass/degenerate + StrongREJECT |
+| 08 | `08_sweep_analysis.py` | — | scores → the four readings of the sweep |
 | 07 | `07_figures.py` | — | analysis JSONs → figures |
 
-The three reference directions (`r_hat.pt`, `v_mp.pt`) are produced by running the repos in
-`external/` and dropping their output into `artifacts/directions/` — see `external/README.md`.
+Steps 09, 10, 11 and 05 read the selected layer from `results/layer_select.json`, and 05 reads
+the α ladder from `results/alpha_ladder.json` (`--layer auto --alphas auto`, the defaults), so
+the layer and the ladder are never retyped into a command or carried in a notebook variable.
+
+`r_hat` is minted per layer by step 02b from the cube that Arditi's repo writes into
+`artifacts/directions/` — see `external/README.md`. `v_MP` is our reimplementation of Zhong's
+`compliant_v2 model_persona`, extracted through the same stage 02 as `v_C`.
 
 ## Status
 

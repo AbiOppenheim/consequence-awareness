@@ -45,28 +45,30 @@ def group_cv_auc(acts: np.ndarray, labels: np.ndarray, groups: np.ndarray,
     return float(np.mean(scores))
 
 
-def layerwise_accuracy(
-    acts_by_layer: dict[int, np.ndarray],
-    labels: np.ndarray,
-    template_ids: np.ndarray,
-    heldout_templates: set,
-    seed: int = 0,
-) -> dict[int, dict[str, float]]:
-    """Train on TRAIN templates only; report train-template and held-out-template accuracy
-    per layer. Returns {layer: {'train_templates_acc', 'heldout_templates_acc', 'n_train',
-    'n_heldout'}}."""
-    heldout_mask = np.isin(template_ids, list(heldout_templates))
-    train_mask = ~heldout_mask
-    if train_mask.sum() == 0 or heldout_mask.sum() == 0:
-        raise ValueError("empty train or held-out split — check template_ids / heldout set")
+def fit_and_score(acts_train: np.ndarray, labels_train: np.ndarray,
+                  acts_test: np.ndarray, labels_test: np.ndarray,
+                  seed: int = 0) -> dict[str, float]:
+    """Fit on train templates, report AUC + accuracy on held-out templates.
 
-    results = {}
-    for layer, acts in acts_by_layer.items():
-        clf = train_probe(acts[train_mask], labels[train_mask], seed=seed)
-        results[layer] = {
-            "train_templates_acc": evaluate_probe(clf, acts[train_mask], labels[train_mask]),
-            "heldout_templates_acc": evaluate_probe(clf, acts[heldout_mask], labels[heldout_mask]),
-            "n_train": int(train_mask.sum()),
-            "n_heldout": int(heldout_mask.sum()),
-        }
-    return results
+    One implementation shared by the held-out reveal (step 09) and its per-layer red-team
+    (step 10), so the headline number and the check on it cannot drift apart.
+    """
+    from sklearn.metrics import roc_auc_score
+
+    clf = train_probe(acts_train, labels_train, seed=seed)
+    return {
+        "auc": float(roc_auc_score(labels_test, clf.decision_function(acts_test))),
+        "acc": float(clf.score(acts_test, labels_test)),
+    }
+
+
+def projection_auc(acts: np.ndarray, labels: np.ndarray, direction) -> float:
+    """AUC of the raw projection h . v — no fitting, so it tests the direction itself.
+
+    The stronger of the two readouts: a fitted probe can find the concept in the activations,
+    but the unfitted projection asks whether the vector we extracted *is* that concept.
+    """
+    from sklearn.metrics import roc_auc_score
+
+    v = np.asarray(direction, dtype=np.float32).reshape(-1)
+    return float(roc_auc_score(labels, acts @ v))

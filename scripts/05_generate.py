@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 """Stage 05 (GPU): the causal sweep — generate under each condition.
 
-    python scripts/05_generate.py --eval fiction_jailbreaks --layer 18
+    python scripts/05_generate.py --eval fiction_jailbreaks
+
+The layer and the alpha ladder default to 'auto': the layer step 03 selected and the ladder
+step 11 calibrated, both read from artifacts/results/. Nothing to retype, and no way to sweep a
+ladder that was never calibrated against this layer's residual norms. Pass --layer / --alphas
+explicitly to override.
 
 Conditions, all written to artifacts/generations/<eval>_L{layer}.jsonl:
   - baseline                         no intervention
@@ -29,6 +34,7 @@ from consequence import data as D
 from consequence import generate as G
 from consequence import hooks as H
 from consequence import io
+from consequence import results
 from consequence.config import load_config, resolve
 
 
@@ -39,30 +45,65 @@ def done_keys(path: Path) -> set:
     return {(r["condition"], r.get("alpha")) for r in D.load_jsonl(path)}
 
 
+def resolve_layer(value: str, results_dir) -> int:
+    """'auto' -> the layer step 03 selected; an integer -> that layer.
+
+    Reading it from the stored result rather than a hand-typed number means the sweep cannot
+    silently steer along a direction extracted somewhere else — the mistake that survives right
+    up until the generations look fine and mean nothing.
+    """
+    if value != "auto":
+        return int(value)
+    layer, path = results.selected_layer(results_dir)
+    print(f"[auto] steering layer L{layer} from {results.relname(path)}")
+    return layer
+
+
+def resolve_alphas(values: list[str], cfg, results_dir) -> list[float]:
+    """'auto' -> step 11's calibrated ladder; 'config' -> steer.alphas; else the values given.
+
+    alpha=0 is dropped in every mode: it is the baseline condition, which runs once on its own
+    rather than once per rung.
+    """
+    if values == ["auto"]:
+        res, _ = results.load("alpha_ladder", results_dir)
+        print(f"[auto] alphas {res['alphas']} = {res['fractions']} x the median residual norm "
+              f"at L{res['layer']}")
+        values = res["alphas"]
+    elif values == ["config"]:
+        values = cfg["steer"]["alphas"]
+        print(f"[config] alphas {values} — placeholders unless 11_calibrate_alpha.py has run")
+    return [float(a) for a in values if float(a) != 0]
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/qwen.yaml")
     ap.add_argument("--eval", default="fiction_jailbreaks", help="key under data: in the config")
-    ap.add_argument("--layer", type=int, required=True,
-                    help="steer with v_c_L{layer}, at the window centred on that layer")
+    ap.add_argument("--layer", default="auto",
+                    help="steer with v_c_L{layer}. 'auto' (default) reads the layer step 03 "
+                         "selected from artifacts/results/layer_select.json.")
     ap.add_argument("--window", type=int, default=1,
                     help="steer at layers [layer-w+1 .. layer]; 1 = only the extraction layer")
     ap.add_argument("--force", action="store_true", help="regenerate conditions already present")
-    ap.add_argument("--alphas", type=float, nargs="+",
-                    help="override the config ladder, e.g. --alphas 12 24 48 96. Prefer this to "
-                         "hand-editing the config: the values land in the .meta.json sidecar, so "
-                         "the run records the ladder it actually used.")
+    ap.add_argument("--alphas", nargs="+", default=["auto"],
+                    help="'auto' (default) reads the ladder calibrated by step 11, or pass "
+                         "values e.g. --alphas 12 24 48 96. Either way they land in the "
+                         ".meta.json sidecar, so the run records the ladder it actually used.")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
-    alphas = [a for a in (args.alphas or cfg["steer"]["alphas"]) if a != 0]
+    rdir = resolve(cfg["paths"]["results"])
+    layer = resolve_layer(args.layer, rdir)
+    alphas = resolve_alphas(args.alphas, cfg, rdir)
     if not alphas:
-        raise SystemExit("no non-zero alphas — pass --alphas or set steer.alphas in the config")
+        raise SystemExit("no non-zero alphas — run scripts/11_calibrate_alpha.py, pass --alphas, "
+                         "or set steer.alphas in the config")
 
     # The steering window is DERIVED from --layer, never read from a separate config key: a
     # direction extracted at L must be added back at L, or we steer along a vector measured
     # somewhere else. (hooks.apply_hooks maps config layer L -> hidden_states[L].)
-    layers = list(range(args.layer - args.window + 1, args.layer + 1))
+    layers = list(range(layer - args.window + 1, layer + 1))
 
     gen_kwargs = dict(
         max_new_tokens=cfg["generate"]["max_new_tokens"],
@@ -74,15 +115,15 @@ def main() -> None:
     prompts = [r.get("text", r.get("prompt"))
                for r in D.load_jsonl(resolve(cfg["data"][args.eval]))]
     ddir = resolve(cfg["paths"]["directions"])
-    out = resolve(cfg["paths"]["generations"]) / f"{args.eval}_L{args.layer}.jsonl"
+    out = resolve(cfg["paths"]["generations"]) / f"{args.eval}_L{layer}.jsonl"
     if args.force and out.exists():
         out.unlink()
     already = done_keys(out)
 
-    v_c, _ = io.load_direction(ddir / f"v_c_L{args.layer}")
-    rand, _ = io.load_direction(ddir / f"random_L{args.layer}")
+    v_c, _ = io.load_direction(ddir / f"v_c_L{layer}")
+    rand, _ = io.load_direction(ddir / f"random_L{layer}")
     r_hat = None
-    rh_path = ddir / f"r_hat_L{args.layer}.pt"          # per-layer, minted from the gate cube
+    rh_path = ddir / f"r_hat_L{layer}.pt"          # per-layer, minted from the gate cube
     if rh_path.exists():
         r_hat, _ = io.load_direction(rh_path)
     else:
@@ -120,7 +161,7 @@ def main() -> None:
 
     meta = out.with_suffix(".meta.json")
     meta.write_text(json.dumps({
-        "eval": args.eval, "model_id": cfg["model"]["id"], "direction_layer": args.layer,
+        "eval": args.eval, "model_id": cfg["model"]["id"], "direction_layer": layer,
         "steer_layers": layers, "alphas": alphas, "seed": cfg["seed"],
         "n_prompts": len(prompts), "conditions": ["baseline", "steer_vc", "steer_vc_neg",
                                                   "steer_random"] + (["steer_rhat"] if r_hat else []),

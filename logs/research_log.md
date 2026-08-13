@@ -4,6 +4,59 @@ Newest entries at the top. One entry per working session (course requirement, CL
 
 ---
 
+## 2026-08-13 — Refactor: one script per research step, results cached on disk
+
+No new science this session. The pipeline was restructured because the notebook had become the
+implementation: layer selection, the held-out reveal, the geometry table and the v_MP extraction
+existed **only as notebook cells**, duplicating (and diverging from) `03_probe.py` and
+`04_geometry.py`, which were stale and had never been run. Every number lived in kernel state,
+so a Colab disconnect meant recomputing minutes of CV, and three cells each reloaded the 375 MB
+activation cache and refit the same probes.
+
+**New contract.** `src/consequence/results.py`: each analysis step writes
+`artifacts/results/<step>.json` = the numbers plus a fingerprint over (input file hashes,
+parameters, the analysis code that ran). A step re-runs only when one of those moved, and prints
+which. Committed, because these are the numbers the write-up cites.
+
+- Scope is the CPU layer only. Stage 01 (`.npz` keyed on the dataset hash) and stage 05
+  (resumable per condition/alpha) keep their own caches — an edit to an unrelated source file
+  must never invalidate a GPU artifact.
+- Steps: `02b_gate` (gate + its 4 red-team checks + mints `r_hat_L*.pt`), `03_probe`
+  (layer selection, **train only** — it no longer computes anything about held-out),
+  `09_heldout` (the reveal), `10_redteam_heldout`, `04_geometry` (rewritten: per-layer, both
+  v_MP framings), `11_calibrate_alpha`.
+- The selected layer and the alpha ladder are read from disk by everything downstream;
+  `05_generate.py` defaults to `--layer auto --alphas auto`. Nothing is retyped into a command.
+- `02_extract_directions.py --kind v_mp` mints the persona directions, so all three directions
+  come from the same validated diff-in-means. Previously v_MP was minted by a notebook cell —
+  three directions extracted three ways cannot be compared by cosine and blamed on geometry.
+- The notebook is now thin: run a step, render its stored result. Outputs cleared (the saved
+  ones were a mix of two sessions and included errors from bugs since fixed).
+
+**Discipline the store buys us, not just speed:**
+- `09_heldout` refuses to run if `v_c_L*.json` does not say `split: train`. That check is the
+  generalization claim; without it the reveal is circular.
+- Re-running the reveal after anything changes archives the previous result as
+  `heldout.prev-<sha>.json` and prints a warning to report both and label the second post-hoc.
+- Re-selecting the layer invalidates the reveal, the red-team and the ladder automatically.
+
+**Verified** against a fabricated fixture (planted signal, tiny d_model, an "Arditi cube" built
+to agree at offset +1): all six steps run; re-runs are no-ops; a param change recomputes only
+that step; a layer re-selection cascades; editing `probe.py` invalidates the steps that import
+it and not the gate; the split guard fires. Fixture deleted, nothing written into `artifacts/`.
+
+**⚠️ Carried over and still open — the Phase 3/4 numbers need one CPU re-run.** Commit `b7ede1c`
+(2026-08-12) fixed stage 02 to extract `v_C` from train templates only; before that it did
+difference-in-means over **all 2000 rows, held-out included**, and section 10 then scored that
+vector on those same 572 rows. So the logged **0.932 unfitted held-out AUC, the per-route table,
+and every cosine in the Phase 4 geometry table came from a leaked `v_C`**. The trained-probe
+0.973 is unaffected (fit on train rows only). Expect the numbers to move a little, not a lot —
+but "should be fine" is not a number. Restore artifacts from Drive and run steps 02 → 03 → 09 →
+10 → 04 on CPU before any of this goes in the write-up. Do it before the GPU session for the
+sweep, not after.
+
+---
+
 ## 2026-08-11 — PHASE 3 VERIFIED + PHASE 4: v_C is distinct from BOTH r_hat and persona
 
 All CPU against cached activations (persona sets needed one ~3 min GPU pass to cache).

@@ -52,6 +52,9 @@ paths:
   generations: artifacts/generations
   scores: artifacts/scores
   figures: artifacts/figures
+  # One small JSON per analysis step, keyed on a hash of its inputs + code (consequence.results).
+  # These are the numbers that go into the write-up, and they are committed.
+  results: artifacts/results
 
 data:
   consequence: data/contrast/consequence.jsonl

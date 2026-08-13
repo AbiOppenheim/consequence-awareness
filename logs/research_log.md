@@ -88,6 +88,18 @@ Also fixed: `["steer_rhat"] if r_hat else []` in the sweep's meta sidecar — tr
 multi-element tensor raises. It crashed *after* all 15 smoke generations, so it cost nothing,
 but it would have wasted the full sweep's model-load time.
 
+**Sweep cost, measured.** 17 conditions (1 baseline + 4 conditions x 4 alphas) over 100 attacks
+= 1,700 generations, but XSTest ships **250** safe prompts = 4,250 more, so ~6,000 total and
+**71% of the GPU time is the over-refusal control**. At 256 new tokens / batch 16 that is
+roughly 60-95 min on an L4 — worth knowing against the ~12h experiment budget. XSTest does not
+need the full ladder: the guard is "at the alpha where steering restores refusal, does it also
+refuse safe prompts?", and one rung answers it. The notebook now runs XSTest at the headline
+alpha only, saving ~3,000 generations. The attack sweep keeps the full ladder.
+
+`step()` also now streams stdout live (stderr to a temp file, shown only on failure). It
+buffered everything, so an hour-long cell that prints one line per condition was
+indistinguishable from a hung one.
+
 **⚠️ Carried over and still open — the Phase 3/4 numbers need one CPU re-run.** Commit `b7ede1c`
 (2026-08-12) fixed stage 02 to extract `v_C` from train templates only; before that it did
 difference-in-means over **all 2000 rows, held-out included**, and section 10 then scored that

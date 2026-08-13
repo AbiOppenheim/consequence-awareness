@@ -26,6 +26,7 @@ are skipped unless --force.
 
 import argparse
 import json
+from collections import Counter
 from pathlib import Path
 
 import _bootstrap  # noqa: F401
@@ -38,11 +39,47 @@ from consequence import results
 from consequence.config import load_config, resolve
 
 
-def done_keys(path: Path) -> set:
-    """(condition, alpha) pairs already generated, so a re-run resumes instead of duplicating."""
+def done_keys(path: Path, n_prompts: int) -> set:
+    """(condition, alpha) pairs that are COMPLETE, so a re-run resumes instead of duplicating.
+
+    A condition counts as done only when all n_prompts of its rows are present. run_condition
+    appends a whole condition at once, so a runtime killed mid-write (a Colab disconnect, a
+    recycled VM) can leave a short group and a truncated final line. Counting rows rather than
+    trusting the label matters: a partial group treated as done would leave the sweep quietly
+    short of prompts under one condition, and every later aggregate would average over a
+    different n than it claims.
+
+    Incomplete groups are dropped from the file so the append stays parseable and the condition
+    regenerates cleanly.
+    """
     if not path.exists():
         return set()
-    return {(r["condition"], r.get("alpha")) for r in D.load_jsonl(path)}
+
+    rows, truncated = [], False
+    lines = path.read_text().splitlines(True)
+    for i, line in enumerate(lines):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            if i == len(lines) - 1:       # died mid-write; anything earlier is real corruption
+                truncated = True
+                break
+            raise
+
+    counts = Counter((r["condition"], r.get("alpha")) for r in rows)
+    complete = {k for k, n in counts.items() if n >= n_prompts}
+    partial = sorted(k for k, n in counts.items() if n < n_prompts)
+    if partial or truncated:
+        kept = [r for r in rows if (r["condition"], r.get("alpha")) in complete]
+        path.write_text("".join(json.dumps(r) + "\n" for r in kept))
+        print(f"[resume] dropped {len(rows) - len(kept)} rows from incomplete conditions "
+              f"{partial} — regenerating them")
+    if complete:
+        print(f"[resume] {len(complete)} (condition, alpha) pairs already complete "
+              f"({len(complete) * n_prompts} generations kept)")
+    return complete
 
 
 def resolve_layer(value: str, results_dir) -> int:
@@ -118,7 +155,7 @@ def main() -> None:
     out = resolve(cfg["paths"]["generations"]) / f"{args.eval}_L{layer}.jsonl"
     if args.force and out.exists():
         out.unlink()
-    already = done_keys(out)
+    already = done_keys(out, len(prompts))
 
     v_c, _ = io.load_direction(ddir / f"v_c_L{layer}")
     rand, _ = io.load_direction(ddir / f"random_L{layer}")

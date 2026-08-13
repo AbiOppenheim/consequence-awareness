@@ -49,6 +49,10 @@ from consequence.config import REPO_ROOT
 
 TRAITS_ZIP = REPO_ROOT / "external" / "refusal-downstream-persona" / "configs" / "traits.zip"
 BENIGN = REPO_ROOT / "data" / "contrast" / "benign_tasks.jsonl"
+OUTPUTS = {
+    "system": REPO_ROOT / "data" / "contrast" / "persona.jsonl",
+    "userturn": REPO_ROOT / "data" / "contrast" / "persona_ut.jsonl",
+}
 
 
 def load_trait(name: str) -> dict:
@@ -67,7 +71,19 @@ def main() -> None:
     ap.add_argument("--trait", default="compliant_v2", help="Zhong's Qwen MP trait")
     ap.add_argument("--include-benign", action="store_true", default=True,
                     help="add our 40 benign tasks as neutral control questions")
+    ap.add_argument("--force", action="store_true",
+                    help="rebuild even if the outputs exist (needs Zhong's traits.zip)")
     args = ap.parse_args()
+
+    # Resumable (Rule 4). Both outputs are COMMITTED, so a fresh clone already has them and
+    # rebuilding needs Zhong's traits.zip — which their partial release only provides once
+    # their repo is cloned into external/. Failing here would block Phase 4 on a runtime that
+    # has everything it actually needs.
+    if not args.force and all(p.exists() for p in OUTPUTS.values()):
+        for p in OUTPUTS.values():
+            print(f"[skip] {p.name} exists ({sum(1 for _ in open(p))} rows) — committed with "
+                  "the repo; pass --force to rebuild from traits.zip")
+        return
 
     tr = load_trait(args.trait)
     pos, neg = tr["instructions"]["positive"], tr["instructions"]["negative"]
@@ -106,8 +122,7 @@ def main() -> None:
                     rows.append(row)
                 pid += 1
 
-        out = REPO_ROOT / "data" / "contrast" / (
-            "persona.jsonl" if framing == "system" else "persona_ut.jsonl")
+        out = OUTPUTS[framing]
         with open(out, "w") as f:
             for r in rows:
                 f.write(json.dumps(r) + "\n")

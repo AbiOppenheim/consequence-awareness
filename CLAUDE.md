@@ -97,7 +97,7 @@ inputs must be a no-op, not a recompute.
 | Framework | plain HuggingFace `transformers` + PyTorch forward hooks |
 | Precision | bf16, frozen weights |
 | Probes | `sklearn.linear_model.LogisticRegression`, CPU |
-| Judge | Anthropic API, Haiku-class, Batch API |
+| Judge | OpenAI API, `gpt-4.1-mini`-class bulk classifier, structured outputs |
 
 **Do not add TransformerLens or nnsight.** Zhong's code — our closest template — is plain HF
 plus hooks, and a hook is ~15 lines. A second framework buys nothing and costs fp32 caching

@@ -41,9 +41,14 @@ generate:
 
 # ---- Stage 06: judging (API, CPU) ----
 judge:
-  provider: anthropic
-  model: claude-haiku-4-5-20251001   # Haiku-class bulk judge
-  use_batch_api: true
+  provider: openai                   # 'openai' | 'anthropic' — only the transport differs
+  model: gpt-4.1-mini                # cheap bulk classifier; verify it against the current
+                                     # model list, names are retired over time. gpt-4.1-nano is
+                                     # cheaper, gpt-5-mini newer. Must support structured outputs.
+  use_batch_api: false               # true = ~50% cheaper, up to 24 h turnaround. At ~6k
+                                     # judgments that saves about a dollar, so the default
+                                     # spends the dollar and keeps the day.
+  max_workers: 8                     # concurrent requests when use_batch_api is false
   # Never report StrongREJECT alone; always emit the three-way refusal/bypass/degenerate label.
 
 paths:

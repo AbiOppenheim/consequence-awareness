@@ -6,8 +6,9 @@
 Adds label (refusal/bypass/degenerate) + strongreject + coherent to every row, writes the
 scored rows to artifacts/scores/, and prints per-condition summaries. Never StrongREJECT alone.
 
-Requires ANTHROPIC_API_KEY. The API call itself is stubbed in consequence.judge.score_batch;
-this wrapper fixes the I/O flow so nothing else changes once the call is wired.
+Needs the API key for whichever provider `judge.provider` names in the config: OPENAI_API_KEY
+for 'openai' (the default), ANTHROPIC_API_KEY for 'anthropic'. The judge prompt, schema and
+parsing are shared, so the provider changes the bill and nothing about what is measured.
 """
 
 import argparse
@@ -29,8 +30,11 @@ def main() -> None:
 
     cfg = load_config(args.config)
     rows = D.load_jsonl(args.generations)
-    scored = J.score_batch(rows, model=cfg["judge"]["model"],
-                           use_batch_api=cfg["judge"]["use_batch_api"])
+    jcfg = cfg["judge"]
+    scored = J.score_batch(rows, model=jcfg["model"],
+                           provider=jcfg.get("provider", "openai"),
+                           use_batch_api=jcfg.get("use_batch_api", False),
+                           max_workers=jcfg.get("max_workers", 8))
 
     out = resolve(cfg["paths"]["scores"]) / (Path(args.generations).stem + "_scored.jsonl")
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -48,7 +48,11 @@ judge:
   use_batch_api: false               # true = ~50% cheaper, up to 24 h turnaround. At ~6k
                                      # judgments that saves about a dollar, so the default
                                      # spends the dollar and keeps the day.
-  max_workers: 8                     # concurrent requests when use_batch_api is false
+  max_workers: 4                     # concurrent requests when use_batch_api is false. Higher
+                                     # is not faster once the per-minute token budget binds; it
+                                     # just converts throughput into 429s.
+  max_retries: 8                     # SDK default is 2, which lost 43% of a 1700-row file to
+                                     # rate limits. The SDK honours Retry-After; give it room.
   # Never report StrongREJECT alone; always emit the three-way refusal/bypass/degenerate label.
 
 paths:

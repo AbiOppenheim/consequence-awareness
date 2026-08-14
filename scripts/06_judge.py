@@ -26,6 +26,15 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/qwen.yaml")
     ap.add_argument("--generations", required=True)
+    ap.add_argument("--resume", action="store_true",
+                    help="re-judge ONLY the rows that failed last time, keeping the successful "
+                         "verdicts from the existing scored file. A rate-limited run leaves "
+                         "most rows judged; this pays for the remainder instead of the lot.")
+    ap.add_argument("--max-failed", type=float, default=0.02,
+                    help="fail the stage if more than this FRACTION of rows went unjudged. "
+                         "Missing judgments are not neutral: they land unevenly across "
+                         "conditions, and a summary built on them looks authoritative while "
+                         "resting on a biased subsample.")
     ap.add_argument("--limit", type=int, default=None,
                     help="judge only the first N rows. Use it once against the live API before "
                          "spending on the full file: it proves the key, the model name and the "
@@ -40,13 +49,36 @@ def main() -> None:
         rows = rows[:args.limit]
         print(f"[judge] --limit {args.limit}: TRIAL RUN, not a complete scoring")
     jcfg = cfg["judge"]
-    scored = J.score_batch(rows, model=jcfg["model"],
-                           provider=jcfg.get("provider", "openai"),
-                           use_batch_api=jcfg.get("use_batch_api", False),
-                           max_workers=jcfg.get("max_workers", 8))
-
     suffix = f"_limit{args.limit}_scored.jsonl" if args.limit else "_scored.jsonl"
     out = resolve(cfg["paths"]["scores"]) / (Path(args.generations).stem + suffix)
+
+    kept = []
+    if args.resume:
+        if not out.exists():
+            raise SystemExit(f"--resume needs an existing {out.name} to resume from")
+        prior = D.load_jsonl(out)
+        if len(prior) != len(rows):
+            raise SystemExit(f"{out.name} has {len(prior)} rows, {args.generations} has "
+                             f"{len(rows)} — different runs; drop --resume")
+        kept = [r for r in prior if r.get("label") in J.LABELS]
+        rows = [r for r in prior if r.get("label") not in J.LABELS]
+        print(f"[resume] {len(kept)} verdicts kept, re-judging {len(rows)} that failed")
+        if not rows:
+            print("[resume] nothing left to judge")
+
+    judged = J.score_batch(rows, model=jcfg["model"],
+                           provider=jcfg.get("provider", "openai"),
+                           use_batch_api=jcfg.get("use_batch_api", False),
+                           max_workers=jcfg.get("max_workers", 4),
+                           max_retries=jcfg.get("max_retries", 8)) if rows else []
+    scored = kept + judged
+    # Keep the generation order, so the scored file lines up with the generations file.
+    order = {(r["condition"], r.get("alpha"), r.get("idx")): i for i, r in enumerate(D.load_jsonl(args.generations))}
+    scored.sort(key=lambda r: order.get((r["condition"], r.get("alpha"), r.get("idx")), 0))
+
+    n_failed = sum(r.get("label") not in J.LABELS for r in scored)
+    frac = n_failed / max(len(scored), 1)
+
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w") as f:
         for r in scored:
@@ -60,8 +92,22 @@ def main() -> None:
     with open(out.with_suffix(".summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
     for k, v in summary.items():
+        flag = "  <- INCOMPLETE" if v["n_failed"] else ""
         print(f"[{k}] refusal={v['refusal_rate']:.2f} bypass={v['bypass_rate']:.2f} "
-              f"degen={v['degenerate_rate']:.2f} SR={v['mean_strongreject']:.2f}")
+              f"degen={v['degenerate_rate']:.2f} SR={v['mean_strongreject']:.2f} "
+              f"n={v['n_judged']}/{v['n_total']}{flag}")
+
+    if frac > args.max_failed:
+        raise SystemExit(
+            f"\n{n_failed}/{len(scored)} rows ({frac:.0%}) went unjudged — above the "
+            f"{args.max_failed:.0%} threshold.\n"
+            f"  The verdicts that DID land are saved in {out.name}, so nothing is lost.\n"
+            "  Missing judgments are not spread evenly: they accumulate in whichever conditions\n"
+            "  were being judged when the budget ran out, so the surviving rows are a biased\n"
+            "  subsample and any dose-response read off them may be a rate-limit curve.\n"
+            "  Re-run with --resume to judge only the failures (and lower judge.max_workers if\n"
+            "  they were 429s)."
+        )
 
 
 if __name__ == "__main__":

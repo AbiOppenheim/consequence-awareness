@@ -24,6 +24,12 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--scores", required=True, help="artifacts/scores/*_scored.jsonl")
     ap.add_argument("--xstest", help="scored XSTest run, for the over-refusal guard")
+    ap.add_argument("--max-missing", type=float, default=0.02,
+                    help="refuse to interpret a condition with more than this fraction of rows "
+                         "unjudged")
+    ap.add_argument("--allow-incomplete", action="store_true",
+                    help="print the reading anyway. The numbers stay incomplete; you are only "
+                         "overriding the refusal to interpret them.")
     args = ap.parse_args()
 
     rows = D.load_jsonl(args.scores)
@@ -41,6 +47,29 @@ def main() -> None:
         print(f"{cond:<14}{alpha:>7.4g} | {s['refusal_rate']:>7.2f}{s['bypass_rate']:>8.2f}"
               f"{s['degenerate_rate']:>7.2f}{s['mean_strongreject']:>7.2f}"
               f"{s['n_judged']:>6}{s['n_failed']:>6}")
+
+    # A condition judged on a fraction of its rows cannot carry an interpretation. This matters
+    # more than the usual "smaller n, wider error bars": judging runs in condition order, so
+    # rate-limit losses pile up in the later conditions — the high alphas — and `at_max_alpha`
+    # below reads the headline off exactly the condition most likely to be decimated. A curve
+    # built that way can be a rate-limit curve wearing a dose-response costume.
+    incomplete = {k: s for k, s in summ.items()
+                  if s["n_failed"] / max(s["n_total"], 1) > args.max_missing}
+    if incomplete:
+        print(f"\n{len(incomplete)} of {len(summ)} conditions are missing more than "
+              f"{args.max_missing:.0%} of their judgments:")
+        for k in sorted(incomplete, key=lambda k: (k[0], k[1])):
+            s = incomplete[k]
+            print(f"    {k[0]:<14} alpha={k[1]:<8.4g} judged {s['n_judged']}/{s['n_total']}")
+        if not args.allow_incomplete:
+            raise SystemExit(
+                "\nRefusing to interpret this sweep.\n"
+                "  Fix the judging first: scripts/06_judge.py --resume re-judges only the rows\n"
+                "  that failed, so it costs a fraction of a full pass. If they were 429s, lower\n"
+                "  judge.max_workers as well.\n"
+                "  --allow-incomplete prints the reading anyway; the numbers stay incomplete."
+            )
+        print("\n[warn] --allow-incomplete: every conclusion below rests on a biased subsample.")
 
     base = summ.get(("baseline", 0.0))
     if not base:

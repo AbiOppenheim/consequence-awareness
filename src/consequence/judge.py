@@ -83,7 +83,7 @@ PROVIDER_ENV = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
 
 def score_batch(rows: list[dict], model: str, provider: str = "openai",
                 use_batch_api: bool = False, max_wait_s: int = 7200, poll_s: int = 30,
-                max_workers: int = 8) -> list[dict]:
+                max_workers: int = 4, max_retries: int = 8) -> list[dict]:
     """Judge generation rows (each with 'prompt' and 'completion') and return them scored.
 
     Adds 'label', 'strongreject', 'coherent'. Rows whose judgment failed get label=None and a
@@ -112,7 +112,8 @@ def score_batch(rows: list[dict], model: str, provider: str = "openai",
 
     print(f"[judge] {len(out)} generations | {provider} {model} | "
           f"{'batch API' if use_batch_api else f'{max_workers} concurrent requests'}")
-    runner(out, model, max_wait_s=max_wait_s, poll_s=poll_s, max_workers=max_workers)
+    runner(out, model, max_wait_s=max_wait_s, poll_s=poll_s, max_workers=max_workers,
+           max_retries=max_retries)
 
     n_ok = sum(r.get("label") in LABELS for r in out)
     n_bad = len(out) - n_ok
@@ -151,16 +152,23 @@ def _openai_params(model: str, row: dict) -> dict:
     }
 
 
-def _openai_concurrent(out, model, *, max_workers=8, **_):
+def _openai_concurrent(out, model, *, max_workers=4, max_retries=8, **_):
     """Plain Chat Completions, several in flight at once.
 
     Sequential requests would take hours at this volume; the work is embarrassingly parallel and
     each row is independent, so a thread pool is the whole story. Failures are recorded per row
     rather than raised, so one bad response cannot lose 5,999 good judgments.
+
+    max_retries matters more than it looks. The SDK default is 2, which is nowhere near enough
+    against a per-minute token budget: a first run lost 43% of one file and 76% of another to
+    HTTP 429, and — worse than the loss — the survivors were not a random sample. Judging
+    proceeds in condition order, so the early conditions came back complete and the later ones
+    came back decimated, which reads as a dose-response curve that is really a rate-limit curve.
+    The SDK honours Retry-After when given the budget to; give it the budget.
     """
     from openai import OpenAI   # imported here so CPU-only stages stay dependency-light
 
-    client = OpenAI()
+    client = OpenAI(max_retries=max_retries)
 
     def judge_one(i: int) -> None:
         try:
@@ -178,14 +186,14 @@ def _openai_concurrent(out, model, *, max_workers=8, **_):
                 print(f"[judge] {done}/{len(out)}")
 
 
-def _openai_batch(out, model, *, max_wait_s=7200, poll_s=30, **_):
+def _openai_batch(out, model, *, max_wait_s=7200, poll_s=30, max_retries=8, **_):
     """The Batch API: upload a JSONL of requests, poll, download the results.
 
     Results come back in arbitrary order, so they are keyed by custom_id, never by position.
     """
     from openai import OpenAI
 
-    client = OpenAI()
+    client = OpenAI(max_retries=max_retries)
     with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
         for i, r in enumerate(out):
             f.write(json.dumps({"custom_id": f"gen-{i}", "method": "POST",
@@ -244,10 +252,10 @@ def _anthropic_params(model: str, row: dict) -> dict:
     }
 
 
-def _anthropic_concurrent(out, model, *, max_workers=8, **_):
+def _anthropic_concurrent(out, model, *, max_workers=4, max_retries=8, **_):
     import anthropic
 
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(max_retries=max_retries)
 
     def judge_one(i: int) -> None:
         try:
@@ -260,10 +268,10 @@ def _anthropic_concurrent(out, model, *, max_workers=8, **_):
         list(pool.map(judge_one, range(len(out))))
 
 
-def _anthropic_batch(out, model, *, max_wait_s=7200, poll_s=30, **_):
+def _anthropic_batch(out, model, *, max_wait_s=7200, poll_s=30, max_retries=8, **_):
     import anthropic
 
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(max_retries=max_retries)
     batch = client.messages.batches.create(requests=[
         {"custom_id": f"gen-{i}", "params": _anthropic_params(model, r)}
         for i, r in enumerate(out)

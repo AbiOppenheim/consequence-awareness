@@ -141,18 +141,27 @@ def save(name: str, result: Any, *, inputs: Iterable[str | Path] = (),
     out.parent.mkdir(parents=True, exist_ok=True)
 
     fp = fingerprint(inputs, params, entry)
+    new_result = _jsonable(result)
     if archive and out.exists():
         old = json.loads(out.read_text())
         old_sha = old.get("_meta", {}).get("fingerprint", {}).get("sha", "unknown")
-        if old_sha != fp["sha"]:
+        # Archive on a changed NUMBER, never on a changed hash. The fingerprint covers every
+        # consequence.* module the step imported, so an edit anywhere in that surface — adding
+        # a GPU check to acts.py, say — invalidates the result and forces a recompute that
+        # lands on exactly the same value. Treating that as a second look at held-out data
+        # cries wolf on the one alarm in this project that must never be ignored.
+        if old_sha != fp["sha"] and old.get("result") != new_result:
             kept = out.with_name(f"{name}.prev-{old_sha}.json")
             kept.write_text(out.read_text())
-            print(f"[results] !! {name} already existed with a DIFFERENT fingerprint.\n"
+            print(f"[results] !! {name} was recomputed and the RESULT CHANGED.\n"
                   f"[results]    previous version kept at {relname(kept)}.\n"
                   f"[results]    Report BOTH numbers and label this one post-hoc.")
+        elif old_sha != fp["sha"]:
+            print(f"[results] {name}: recomputed after an input/code change — result identical, "
+                  "nothing archived")
 
     payload = {
-        "result": _jsonable(result),
+        "result": new_result,
         "_meta": {
             "name": name,
             "fingerprint": fp,

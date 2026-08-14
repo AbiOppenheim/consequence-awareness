@@ -1,0 +1,42 @@
+{
+  "result": {
+    "layer": 18,
+    "n_heldout_rows": 572,
+    "n_heldout_templates": 40,
+    "probe_auc": 0.9726270233263241,
+    "probe_acc": 0.9178321678321678,
+    "v_c_projection_auc": 0.9350824001173651,
+    "random_direction_auc": 0.4078072277372977,
+    "bow_baseline_auc": 0.753,
+    "v_c_extracted_from_split": "train"
+  },
+  "_meta": {
+    "name": "heldout",
+    "fingerprint": {
+      "inputs": {
+        "artifacts/activations/consequence_Qwen2.5-7B-Instruct.npz": "0490e3adb1ab69dc",
+        "artifacts/directions/random_L18.pt": "a30d61404f151a3e",
+        "artifacts/directions/v_c_L18.pt": "a529cd83510a763e",
+        "artifacts/results/layer_select.json": "f1e03676fa9f4f89"
+      },
+      "params": {
+        "dataset": "consequence",
+        "bow_baseline": 0.753,
+        "seed": 0
+      },
+      "code": {
+        "09_heldout.py": "5053a5d99c73e3cb",
+        "consequence/__init__.py": "e72d3c20839e0beb",
+        "consequence/acts.py": "ac9858fa73660c23",
+        "consequence/config.py": "5913a357ba3034d0",
+        "consequence/io.py": "4c33448e5e658bbd",
+        "consequence/probe.py": "7c52c27fa7171449",
+        "consequence/results.py": "2d35d512e7f733cf"
+      },
+      "sha": "2519b9385b3264c7"
+    },
+    "git_sha": "412988d",
+    "command": "scripts/09_heldout.py",
+    "written": "2026-08-13 22:38:09"
+  }
+}

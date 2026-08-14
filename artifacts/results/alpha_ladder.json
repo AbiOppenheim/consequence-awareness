@@ -1,0 +1,50 @@
+{
+  "result": {
+    "layer": 18,
+    "median_norm": 71.37260437011719,
+    "p05_norm": 68.6500244140625,
+    "p95_norm": 74.70822143554688,
+    "fractions": [
+      0.25,
+      0.5,
+      1.0,
+      2.0
+    ],
+    "alphas": [
+      17.8,
+      35.7,
+      71.4,
+      142.7
+    ]
+  },
+  "_meta": {
+    "name": "alpha_ladder",
+    "fingerprint": {
+      "inputs": {
+        "artifacts/activations/consequence_Qwen2.5-7B-Instruct.npz": "0490e3adb1ab69dc",
+        "artifacts/results/layer_select.json": "f1e03676fa9f4f89"
+      },
+      "params": {
+        "dataset": "consequence",
+        "fractions": [
+          0.25,
+          0.5,
+          1.0,
+          2.0
+        ]
+      },
+      "code": {
+        "11_calibrate_alpha.py": "92b2d8c5d7cb8bb1",
+        "consequence/__init__.py": "e72d3c20839e0beb",
+        "consequence/acts.py": "ac9858fa73660c23",
+        "consequence/config.py": "5913a357ba3034d0",
+        "consequence/io.py": "4c33448e5e658bbd",
+        "consequence/results.py": "2d35d512e7f733cf"
+      },
+      "sha": "6b585a874aca39a4"
+    },
+    "git_sha": "412988d",
+    "command": "scripts/11_calibrate_alpha.py",
+    "written": "2026-08-13 22:39:11"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "command": "scripts/02_extract_directions.py --dataset consequence",
+  "contrast": "none",
+  "d_model": 3584,
+  "git_sha": "94bfff8",
+  "layer": 18,
+  "method": "random_null",
+  "model_id": "Qwen/Qwen2.5-7B-Instruct",
+  "n_pairs": 714,
+  "pt_file": "random_L18.pt",
+  "seed": 0,
+  "source_contrast": "data/contrast/consequence.jsonl",
+  "split": "train",
+  "token_position": -1
+}

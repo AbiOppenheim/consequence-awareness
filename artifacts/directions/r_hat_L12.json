@@ -1,0 +1,14 @@
+{
+  "command": "scripts/02b_gate.py",
+  "contrast": "harmful_minus_harmless",
+  "d_model": 3584,
+  "git_sha": "94bfff8",
+  "layer": 12,
+  "method": "diff_in_means via Arditi generate_directions",
+  "model_id": "Qwen/Qwen2.5-7B-Instruct",
+  "n_pairs": 128,
+  "pt_file": "r_hat_L12.pt",
+  "seed": 0,
+  "source_contrast": "data/contrast/refusal.jsonl",
+  "token_position": -1
+}

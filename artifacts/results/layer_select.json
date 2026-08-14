@@ -1,0 +1,89 @@
+{
+  "result": {
+    "dataset": "consequence",
+    "best_layer": 18,
+    "best_train_cv_auc": 0.9993578069302831,
+    "by_layer": [
+      {
+        "layer": 8,
+        "train_cv_auc": 0.9979396658657818
+      },
+      {
+        "layer": 10,
+        "train_cv_auc": 0.9955146828502615
+      },
+      {
+        "layer": 12,
+        "train_cv_auc": 0.9960891791760575
+      },
+      {
+        "layer": 14,
+        "train_cv_auc": 0.9960496025788169
+      },
+      {
+        "layer": 16,
+        "train_cv_auc": 0.9982989535240794
+      },
+      {
+        "layer": 18,
+        "train_cv_auc": 0.9993578069302831
+      },
+      {
+        "layer": 20,
+        "train_cv_auc": 0.9990572445356145
+      },
+      {
+        "layer": 22,
+        "train_cv_auc": 0.9991134149198274
+      },
+      {
+        "layer": 24,
+        "train_cv_auc": 0.9982625121729093
+      }
+    ],
+    "spread": 0.0038431240800216315,
+    "n_train_rows": 1428,
+    "n_heldout_rows": 572,
+    "n_train_templates": 100,
+    "n_heldout_templates": 40,
+    "n_splits": 5,
+    "selection_rule": "max group-CV AUC over TRAIN templates; held-out never consulted"
+  },
+  "_meta": {
+    "name": "layer_select",
+    "fingerprint": {
+      "inputs": {
+        "artifacts/activations/consequence_Qwen2.5-7B-Instruct.npz": "0490e3adb1ab69dc"
+      },
+      "params": {
+        "dataset": "consequence",
+        "layers": [
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24
+        ],
+        "n_splits": 5,
+        "seed": 0
+      },
+      "code": {
+        "03_probe.py": "687906f08fcf223e",
+        "consequence/__init__.py": "e72d3c20839e0beb",
+        "consequence/acts.py": "ac9858fa73660c23",
+        "consequence/config.py": "5913a357ba3034d0",
+        "consequence/io.py": "4c33448e5e658bbd",
+        "consequence/probe.py": "7c52c27fa7171449",
+        "consequence/results.py": "2d35d512e7f733cf"
+      },
+      "sha": "d9f9bc08f6167f24"
+    },
+    "git_sha": "412988d",
+    "command": "scripts/03_probe.py --dataset consequence",
+    "written": "2026-08-13 22:37:58"
+  }
+}

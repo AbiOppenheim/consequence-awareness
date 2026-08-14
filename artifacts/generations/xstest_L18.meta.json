@@ -1,0 +1,20 @@
+{
+  "eval": "xstest",
+  "model_id": "Qwen/Qwen2.5-7B-Instruct",
+  "direction_layer": 18,
+  "steer_layers": [
+    18
+  ],
+  "alphas": [
+    35.7
+  ],
+  "seed": 0,
+  "n_prompts": 250,
+  "conditions": [
+    "baseline",
+    "steer_vc",
+    "steer_vc_neg",
+    "steer_random",
+    "steer_rhat"
+  ]
+}

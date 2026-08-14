@@ -1,0 +1,25 @@
+{
+  "artifact": "arditi_mean_diffs_cube",
+  "command": "../../scripts/arditi_qwen25/run_extract.py --refusal ../../data/contrast/refusal.jsonl --model Qwen/Qwen2.5-7B-Instruct --out ../../artifacts/directions/r_hat_mean_diffs",
+  "layer": "all_candidate_layers",
+  "method": "diff_in_means via Arditi generate_directions (unchanged)",
+  "model_id": "Qwen/Qwen2.5-7B-Instruct",
+  "n_pairs": 128,
+  "note": "raw candidate cube; unit r_hat at a chosen layer is minted on CPU with io.save_direction",
+  "positions": [
+    -5,
+    -4,
+    -3,
+    -2,
+    -1
+  ],
+  "reference_repo_git_sha": "9d852fa",
+  "seed": 0,
+  "shape": [
+    5,
+    28,
+    3584
+  ],
+  "source_contrast": "../../data/contrast/refusal.jsonl",
+  "token_position": "all_eoi_positions; compare at index -1 (last prompt token)"
+}

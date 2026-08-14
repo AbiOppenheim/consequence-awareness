@@ -1,0 +1,23 @@
+{
+  "eval": "fiction_jailbreaks",
+  "model_id": "Qwen/Qwen2.5-7B-Instruct",
+  "direction_layer": 18,
+  "steer_layers": [
+    18
+  ],
+  "alphas": [
+    17.8,
+    35.7,
+    71.4,
+    142.7
+  ],
+  "seed": 0,
+  "n_prompts": 100,
+  "conditions": [
+    "baseline",
+    "steer_vc",
+    "steer_vc_neg",
+    "steer_random",
+    "steer_rhat"
+  ]
+}

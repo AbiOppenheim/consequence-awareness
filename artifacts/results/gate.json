@@ -1,0 +1,201 @@
+{
+  "result": {
+    "n_prompts": 256,
+    "n_harmful": 128,
+    "n_layers": 28,
+    "dead_arditi_layers": [
+      0
+    ],
+    "offsets": {
+      "-1": {
+        "mean_cos": 0.5799722396410428,
+        "n": 26
+      },
+      "0": {
+        "mean_cos": 0.7411832986054597,
+        "n": 27
+      },
+      "1": {
+        "mean_cos": 0.9998968066992583,
+        "n": 27
+      },
+      "2": {
+        "mean_cos": 0.7382568235580738,
+        "n": 26
+      }
+    },
+    "per_layer_offset1": [
+      {
+        "our_layer": 0,
+        "arditi_layer": 1,
+        "cos": 0.999376654624939
+      },
+      {
+        "our_layer": 1,
+        "arditi_layer": 2,
+        "cos": 0.9995415210723877
+      },
+      {
+        "our_layer": 2,
+        "arditi_layer": 3,
+        "cos": 0.9996429681777954
+      },
+      {
+        "our_layer": 3,
+        "arditi_layer": 4,
+        "cos": 0.9996685981750488
+      },
+      {
+        "our_layer": 4,
+        "arditi_layer": 5,
+        "cos": 0.999843180179596
+      },
+      {
+        "our_layer": 5,
+        "arditi_layer": 6,
+        "cos": 0.9999256134033203
+      },
+      {
+        "our_layer": 6,
+        "arditi_layer": 7,
+        "cos": 0.9999123811721802
+      },
+      {
+        "our_layer": 7,
+        "arditi_layer": 8,
+        "cos": 0.9999169111251831
+      },
+      {
+        "our_layer": 8,
+        "arditi_layer": 9,
+        "cos": 0.9999269247055054
+      },
+      {
+        "our_layer": 9,
+        "arditi_layer": 10,
+        "cos": 0.9999091625213623
+      },
+      {
+        "our_layer": 10,
+        "arditi_layer": 11,
+        "cos": 0.9999098181724548
+      },
+      {
+        "our_layer": 11,
+        "arditi_layer": 12,
+        "cos": 0.9999287128448486
+      },
+      {
+        "our_layer": 12,
+        "arditi_layer": 13,
+        "cos": 0.9999139308929443
+      },
+      {
+        "our_layer": 13,
+        "arditi_layer": 14,
+        "cos": 0.9999523162841797
+      },
+      {
+        "our_layer": 14,
+        "arditi_layer": 15,
+        "cos": 0.9999679327011108
+      },
+      {
+        "our_layer": 15,
+        "arditi_layer": 16,
+        "cos": 0.999978244304657
+      },
+      {
+        "our_layer": 16,
+        "arditi_layer": 17,
+        "cos": 0.9999785423278809
+      },
+      {
+        "our_layer": 17,
+        "arditi_layer": 18,
+        "cos": 0.9999804496765137
+      },
+      {
+        "our_layer": 18,
+        "arditi_layer": 19,
+        "cos": 0.9999887943267822
+      },
+      {
+        "our_layer": 19,
+        "arditi_layer": 20,
+        "cos": 0.9999929666519165
+      },
+      {
+        "our_layer": 20,
+        "arditi_layer": 21,
+        "cos": 0.9999935030937195
+      },
+      {
+        "our_layer": 21,
+        "arditi_layer": 22,
+        "cos": 0.9999938607215881
+      },
+      {
+        "our_layer": 22,
+        "arditi_layer": 23,
+        "cos": 0.9999942183494568
+      },
+      {
+        "our_layer": 23,
+        "arditi_layer": 24,
+        "cos": 0.9999942779541016
+      },
+      {
+        "our_layer": 24,
+        "arditi_layer": 25,
+        "cos": 0.9999945759773254
+      },
+      {
+        "our_layer": 25,
+        "arditi_layer": 26,
+        "cos": 0.9999942779541016
+      },
+      {
+        "our_layer": 26,
+        "arditi_layer": 27,
+        "cos": 0.9999934434890747
+      }
+    ],
+    "far_layer_abs_cos": 0.1427070051431656,
+    "self_similarity_adjacent": 0.7411534786224365,
+    "permutation": {
+      "n": 200,
+      "true": 0.9998968066992583,
+      "null_mean": -0.01084005717142847,
+      "null_sd": 0.4166470431740715,
+      "null_max": 0.7997740043534173,
+      "p_value": 0.0
+    },
+    "top10_dim_share": 0.06577525287866592,
+    "random_direction_abs_cos_p95": 0.03245022892951965
+  },
+  "_meta": {
+    "name": "gate",
+    "fingerprint": {
+      "inputs": {
+        "artifacts/activations/refusal_Qwen2.5-7B-Instruct.npz": "2cc9e3c703a8dcbf",
+        "artifacts/directions/r_hat_mean_diffs.pt": "5feedaf91e0d9d11"
+      },
+      "params": {
+        "n_permutations": 200,
+        "seed": 0
+      },
+      "code": {
+        "02b_gate.py": "7f831fe7eb3ec22f",
+        "consequence/__init__.py": "e72d3c20839e0beb",
+        "consequence/config.py": "5913a357ba3034d0",
+        "consequence/io.py": "4c33448e5e658bbd",
+        "consequence/results.py": "2d35d512e7f733cf"
+      },
+      "sha": "615e980f72020724"
+    },
+    "git_sha": "0d3e451",
+    "command": "scripts/02b_gate.py",
+    "written": "2026-08-13 20:56:38"
+  }
+}

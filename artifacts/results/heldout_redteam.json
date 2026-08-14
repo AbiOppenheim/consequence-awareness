@@ -1,0 +1,243 @@
+{
+  "result": {
+    "layer": 18,
+    "per_route": [
+      {
+        "route": "commitment",
+        "polarity": "real",
+        "n": 28,
+        "auc": 0.9525474525474524
+      },
+      {
+        "route": "contractual",
+        "polarity": "real",
+        "n": 30,
+        "auc": 0.9773892773892774
+      },
+      {
+        "route": "cost_of_error",
+        "polarity": "real",
+        "n": 28,
+        "auc": 0.9463036963036964
+      },
+      {
+        "route": "escalation",
+        "polarity": "real",
+        "n": 28,
+        "auc": 0.9370629370629371
+      },
+      {
+        "route": "irreversible",
+        "polarity": "real",
+        "n": 30,
+        "auc": 0.9282051282051282
+      },
+      {
+        "route": "legal",
+        "polarity": "real",
+        "n": 29,
+        "auc": 0.945141065830721
+      },
+      {
+        "route": "liability",
+        "polarity": "real",
+        "n": 28,
+        "auc": 0.9686563436563436
+      },
+      {
+        "route": "permanence",
+        "polarity": "real",
+        "n": 29,
+        "auc": 0.8740053050397878
+      },
+      {
+        "route": "record",
+        "polarity": "real",
+        "n": 28,
+        "auc": 0.9075924075924076
+      },
+      {
+        "route": "regulatory",
+        "polarity": "real",
+        "n": 28,
+        "auc": 0.9132117882117883
+      },
+      {
+        "route": "allegory",
+        "polarity": "hypo",
+        "n": 29,
+        "auc": 0.9826380516035689
+      },
+      {
+        "route": "counterfactual",
+        "polarity": "hypo",
+        "n": 28,
+        "auc": 0.9213286713286714
+      },
+      {
+        "route": "draft",
+        "polarity": "hypo",
+        "n": 30,
+        "auc": 0.9975524475524475
+      },
+      {
+        "route": "dry_run",
+        "polarity": "hypo",
+        "n": 28,
+        "auc": 0.9431818181818182
+      },
+      {
+        "route": "idle_curiosity",
+        "polarity": "hypo",
+        "n": 28,
+        "auc": 0.9024725274725274
+      },
+      {
+        "route": "metaphor",
+        "polarity": "hypo",
+        "n": 28,
+        "auc": 0.9991258741258742
+      },
+      {
+        "route": "parody",
+        "polarity": "hypo",
+        "n": 30,
+        "auc": 1.0
+      },
+      {
+        "route": "privacy",
+        "polarity": "hypo",
+        "n": 29,
+        "auc": 0.8591753074511695
+      },
+      {
+        "route": "sandbox",
+        "polarity": "hypo",
+        "n": 28,
+        "auc": 0.7653596403596404
+      },
+      {
+        "route": "stage_play",
+        "polarity": "hypo",
+        "n": 28,
+        "auc": 0.9719030969030968
+      }
+    ],
+    "by_layer": [
+      {
+        "layer": 8,
+        "probe_auc": 0.933260795148907,
+        "v_c_projection_auc": 0.8548217516748986
+      },
+      {
+        "layer": 10,
+        "probe_auc": 0.9612817252677393,
+        "v_c_projection_auc": 0.8569000929140789
+      },
+      {
+        "layer": 12,
+        "probe_auc": 0.9634945474106312,
+        "v_c_projection_auc": 0.8728544183089638
+      },
+      {
+        "layer": 14,
+        "probe_auc": 0.9860384370873881,
+        "v_c_projection_auc": 0.911071446036481
+      },
+      {
+        "layer": 16,
+        "probe_auc": 0.9908552985476062,
+        "v_c_projection_auc": 0.9213286713286712
+      },
+      {
+        "layer": 18,
+        "probe_auc": 0.9726270233263241,
+        "v_c_projection_auc": 0.9350824001173651
+      },
+      {
+        "layer": 20,
+        "probe_auc": 0.9843146364125385,
+        "v_c_projection_auc": 0.9420998581837743
+      },
+      {
+        "layer": 22,
+        "probe_auc": 0.9855738666927478,
+        "v_c_projection_auc": 0.9401315467749034
+      },
+      {
+        "layer": 24,
+        "probe_auc": 0.9917110861166806,
+        "v_c_projection_auc": 0.9406205682429458
+      }
+    ],
+    "text_baselines": [
+      {
+        "name": "tfidf_unigram",
+        "auc": 0.7869700229840091
+      },
+      {
+        "name": "tfidf_uni_bigram",
+        "auc": 0.8472296933835395
+      },
+      {
+        "name": "tfidf_char_3_5",
+        "auc": 0.7711379529561347
+      }
+    ],
+    "random_null": {
+      "n": 100,
+      "mean": 0.47880721551176103,
+      "p05": 0.2632384224167441,
+      "p95": 0.6981820626925522,
+      "max_abs_dev": 0.29919555968507017
+    }
+  },
+  "_meta": {
+    "name": "heldout_redteam",
+    "fingerprint": {
+      "inputs": {
+        "artifacts/activations/consequence_Qwen2.5-7B-Instruct.npz": "0490e3adb1ab69dc",
+        "artifacts/directions/v_c_L10.pt": "6abfc105fc8f932f",
+        "artifacts/directions/v_c_L12.pt": "173ff9c5c368d3c6",
+        "artifacts/directions/v_c_L14.pt": "182bcaea8686d286",
+        "artifacts/directions/v_c_L16.pt": "8fd14df6a20519cf",
+        "artifacts/directions/v_c_L18.pt": "a529cd83510a763e",
+        "artifacts/directions/v_c_L20.pt": "7fb592abf16453e5",
+        "artifacts/directions/v_c_L22.pt": "5f75c677964ace5d",
+        "artifacts/directions/v_c_L24.pt": "f207e918a9e64ab6",
+        "artifacts/directions/v_c_L8.pt": "b8964eeb36c6702d",
+        "artifacts/results/layer_select.json": "f1e03676fa9f4f89",
+        "data/contrast/consequence.jsonl": "13a64f401421bb26"
+      },
+      "params": {
+        "dataset": "consequence",
+        "n_random": 100,
+        "layers": [
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24
+        ],
+        "seed": 0
+      },
+      "code": {
+        "10_redteam_heldout.py": "b0fcb1586208e6ae",
+        "consequence/__init__.py": "e72d3c20839e0beb",
+        "consequence/acts.py": "ac9858fa73660c23",
+        "consequence/config.py": "5913a357ba3034d0",
+        "consequence/io.py": "4c33448e5e658bbd",
+        "consequence/probe.py": "7c52c27fa7171449",
+        "consequence/results.py": "2d35d512e7f733cf"
+      },
+      "sha": "d758d5853997b07d"
+    },
+    "git_sha": "412988d",
+    "command": "scripts/10_redteam_heldout.py",
+    "written": "2026-08-13 22:38:33"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "command": "scripts/02_extract_directions.py --dataset persona --kind v_mp",
+  "contrast": "compliant_minus_restrictive",
+  "d_model": 3584,
+  "git_sha": "94bfff8",
+  "layer": 20,
+  "method": "diff_in_means (our reimplementation of Zhong model_persona)",
+  "model_id": "Qwen/Qwen2.5-7B-Instruct",
+  "n_pairs": 440,
+  "pt_file": "v_mp_persona_L20.pt",
+  "seed": 0,
+  "source_contrast": "data/contrast/persona.jsonl",
+  "split": "all",
+  "token_position": -1,
+  "trait": "compliant_v2"
+}

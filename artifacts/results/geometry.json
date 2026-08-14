@@ -1,0 +1,177 @@
+{
+  "result": {
+    "selected_layer": 18,
+    "layers": [
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24
+    ],
+    "directions_present": [
+      "r_hat",
+      "v_c",
+      "v_mp_persona",
+      "v_mp_persona_ut"
+    ],
+    "by_layer": [
+      {
+        "layer": 8,
+        "null_abs_cos_p95": 0.03288431465625763,
+        "cos(v_C, r_hat)": -0.046554502099752426,
+        "cos(v_C, v_MP sys)": -0.009176190942525864,
+        "cos(v_C, v_MP ut)": 0.0690789744257927,
+        "cos(r_hat, v_MP sys)": -0.038142189383506775,
+        "cos(v_MP sys, v_MP ut)": 0.6691623330116272
+      },
+      {
+        "layer": 10,
+        "null_abs_cos_p95": 0.034643735736608505,
+        "cos(v_C, r_hat)": -0.02609867788851261,
+        "cos(v_C, v_MP sys)": 0.1264575719833374,
+        "cos(v_C, v_MP ut)": 0.1326550841331482,
+        "cos(r_hat, v_MP sys)": -0.02731185220181942,
+        "cos(v_MP sys, v_MP ut)": 0.6501779556274414
+      },
+      {
+        "layer": 12,
+        "null_abs_cos_p95": 0.032600052654743195,
+        "cos(v_C, r_hat)": -0.07939601689577103,
+        "cos(v_C, v_MP sys)": 0.12210170924663544,
+        "cos(v_C, v_MP ut)": 0.10756383836269379,
+        "cos(r_hat, v_MP sys)": 0.04470912739634514,
+        "cos(v_MP sys, v_MP ut)": 0.6452744007110596
+      },
+      {
+        "layer": 14,
+        "null_abs_cos_p95": 0.03085438348352909,
+        "cos(v_C, r_hat)": -0.005217575468122959,
+        "cos(v_C, v_MP sys)": 0.11765012890100479,
+        "cos(v_C, v_MP ut)": 0.18647073209285736,
+        "cos(r_hat, v_MP sys)": 0.0014169533969834447,
+        "cos(v_MP sys, v_MP ut)": 0.8230968117713928
+      },
+      {
+        "layer": 16,
+        "null_abs_cos_p95": 0.030966036021709442,
+        "cos(v_C, r_hat)": 0.07769607752561569,
+        "cos(v_C, v_MP sys)": 0.23835302889347076,
+        "cos(v_C, v_MP ut)": 0.2881389558315277,
+        "cos(r_hat, v_MP sys)": -0.15409360826015472,
+        "cos(v_MP sys, v_MP ut)": 0.8871843218803406
+      },
+      {
+        "layer": 18,
+        "null_abs_cos_p95": 0.032306868582963943,
+        "cos(v_C, r_hat)": 0.08467476814985275,
+        "cos(v_C, v_MP sys)": 0.2421189248561859,
+        "cos(v_C, v_MP ut)": 0.29385459423065186,
+        "cos(r_hat, v_MP sys)": -0.22549793124198914,
+        "cos(v_MP sys, v_MP ut)": 0.9083879590034485
+      },
+      {
+        "layer": 20,
+        "null_abs_cos_p95": 0.031486570835113525,
+        "cos(v_C, r_hat)": 0.12062932550907135,
+        "cos(v_C, v_MP sys)": 0.23598317801952362,
+        "cos(v_C, v_MP ut)": 0.2750241756439209,
+        "cos(r_hat, v_MP sys)": -0.2862551212310791,
+        "cos(v_MP sys, v_MP ut)": 0.9283168315887451
+      },
+      {
+        "layer": 22,
+        "null_abs_cos_p95": 0.03293054178357124,
+        "cos(v_C, r_hat)": 0.13629375398159027,
+        "cos(v_C, v_MP sys)": 0.2013327032327652,
+        "cos(v_C, v_MP ut)": 0.20355252921581268,
+        "cos(r_hat, v_MP sys)": -0.3438968062400818,
+        "cos(v_MP sys, v_MP ut)": 0.9278602600097656
+      },
+      {
+        "layer": 24,
+        "null_abs_cos_p95": 0.03292001783847809,
+        "cos(v_C, r_hat)": 0.1734042465686798,
+        "cos(v_C, v_MP sys)": 0.1478838175535202,
+        "cos(v_C, v_MP ut)": 0.1284497082233429,
+        "cos(r_hat, v_MP sys)": -0.4144972562789917,
+        "cos(v_MP sys, v_MP ut)": 0.9280195832252502
+      }
+    ],
+    "n_random": 1000
+  },
+  "_meta": {
+    "name": "geometry",
+    "fingerprint": {
+      "inputs": {
+        "artifacts/directions/r_hat_L10.pt": "7052c6ebd2ac86b2",
+        "artifacts/directions/r_hat_L12.pt": "4c68ae39829ebf10",
+        "artifacts/directions/r_hat_L14.pt": "b3a35c0a2f776d5c",
+        "artifacts/directions/r_hat_L16.pt": "5be10d3de14e21bf",
+        "artifacts/directions/r_hat_L18.pt": "a071bfa06e690adb",
+        "artifacts/directions/r_hat_L20.pt": "f88e00096e02742b",
+        "artifacts/directions/r_hat_L22.pt": "52dcd02b1d5a2664",
+        "artifacts/directions/r_hat_L24.pt": "74e8d6c5a1b70ffa",
+        "artifacts/directions/r_hat_L8.pt": "2e6b641e7eefaac5",
+        "artifacts/directions/v_c_L10.pt": "6abfc105fc8f932f",
+        "artifacts/directions/v_c_L12.pt": "173ff9c5c368d3c6",
+        "artifacts/directions/v_c_L14.pt": "182bcaea8686d286",
+        "artifacts/directions/v_c_L16.pt": "8fd14df6a20519cf",
+        "artifacts/directions/v_c_L18.pt": "a529cd83510a763e",
+        "artifacts/directions/v_c_L20.pt": "7fb592abf16453e5",
+        "artifacts/directions/v_c_L22.pt": "5f75c677964ace5d",
+        "artifacts/directions/v_c_L24.pt": "f207e918a9e64ab6",
+        "artifacts/directions/v_c_L8.pt": "b8964eeb36c6702d",
+        "artifacts/directions/v_mp_persona_L10.pt": "f9a3426da6a042bb",
+        "artifacts/directions/v_mp_persona_L12.pt": "e80798a18c866992",
+        "artifacts/directions/v_mp_persona_L14.pt": "d5904a3c69a624c9",
+        "artifacts/directions/v_mp_persona_L16.pt": "58ff099ee8da6cb9",
+        "artifacts/directions/v_mp_persona_L18.pt": "b0895151696b39cc",
+        "artifacts/directions/v_mp_persona_L20.pt": "aff809479c7f00f2",
+        "artifacts/directions/v_mp_persona_L22.pt": "481dce9f74a69df2",
+        "artifacts/directions/v_mp_persona_L24.pt": "f212dd35d7f649bc",
+        "artifacts/directions/v_mp_persona_L8.pt": "189dbee4d331ed39",
+        "artifacts/directions/v_mp_persona_ut_L10.pt": "13c953801357c7ab",
+        "artifacts/directions/v_mp_persona_ut_L12.pt": "f87b4c3cf7ce910c",
+        "artifacts/directions/v_mp_persona_ut_L14.pt": "086df7007962331b",
+        "artifacts/directions/v_mp_persona_ut_L16.pt": "3e0bbf9013819f56",
+        "artifacts/directions/v_mp_persona_ut_L18.pt": "a83ee897d94858ec",
+        "artifacts/directions/v_mp_persona_ut_L20.pt": "fad9698dd4b8ef00",
+        "artifacts/directions/v_mp_persona_ut_L22.pt": "45fd8d49a7e282f8",
+        "artifacts/directions/v_mp_persona_ut_L24.pt": "fc80e05f4457a01b",
+        "artifacts/directions/v_mp_persona_ut_L8.pt": "d63704d2c8d9d0c6",
+        "artifacts/results/layer_select.json": "f1e03676fa9f4f89"
+      },
+      "params": {
+        "layers": [
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24
+        ],
+        "n_random": 1000,
+        "seed": 0
+      },
+      "code": {
+        "04_geometry.py": "65721bdf804585ed",
+        "consequence/__init__.py": "e72d3c20839e0beb",
+        "consequence/config.py": "5913a357ba3034d0",
+        "consequence/directions.py": "3f4107796c5ff60a",
+        "consequence/io.py": "4c33448e5e658bbd",
+        "consequence/results.py": "2d35d512e7f733cf"
+      },
+      "sha": "a9f10c0346d3e0c9"
+    },
+    "git_sha": "412988d",
+    "command": "scripts/04_geometry.py",
+    "written": "2026-08-13 22:38:54"
+  }
+}

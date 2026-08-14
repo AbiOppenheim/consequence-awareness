@@ -4,6 +4,74 @@ Newest entries at the top. One entry per working session (course requirement, CL
 
 ---
 
+## 2026-08-13 (later) — Full pipeline ran. Leak question CLOSED. Judging is 43-76% missing.
+
+### The leaked-v_C worry was real but immaterial — closed
+
+Re-ran Phase 3 with `v_C` extracted train-only. Held-out at L18: **unfitted v_C projection
+0.935** (was 0.932 with the contaminated vector), probe 0.973 unchanged, random 0.408.
+**Delta +0.003.** The 572 held-out rows were 29% of the 2000 the old direction was built from,
+but difference-in-means over 1000 pairs is dominated by the shared framing axis, so removing
+them barely moved it. Report 0.935; the correction is worth one sentence in the write-up, not a
+paragraph. Sidecar records `split: train`, so this is now checkable rather than asserted.
+
+`heldout.prev-*.json` was a FALSE alarm from the invalidation rule, not a second look at the
+held-out set: results byte-identical, and the fingerprint moved only because `report_gpu()` was
+added to `acts.py`, which `09_heldout` imports. Fixed — the archive now fires on a changed
+RESULT, never a changed hash. Crying wolf on that alarm is worse than a spurious recompute.
+
+### Phase 5, at the one alpha that is fully judged (α=17.8 = 0.25·‖h‖, n=100/condition)
+
+| condition | refusal | bypass | degenerate | coherent |
+|---|---|---|---|---|
+| baseline | 0.69 | 0.30 | 0.01 | 1.00 |
+| **+α·v_C** | **0.85** | **0.14** | 0.01 | 1.00 |
+| −α·v_C | 0.64 | 0.33 | 0.03 | 0.97 |
+| +α·random | 0.65 | 0.34 | 0.01 | 1.00 |
+| +α·r_hat | 0.99 | 0.00 | 0.01 | 0.99 |
+
+All four things a causal claim needs are present at this rung: **+0.16 refusal without
+degeneration** (coherent 1.00 — this is not gibberish scored as defense); the effect is
+**two-sided** (−α moves to 0.64, so it is not "a large vector degrades output"); the **random
+null does nothing** (0.65, if anything below baseline); and `r_hat` saturating at 0.99 shows
+the ceiling while v_C moves refusal only partway — consistent with cos(v_C, r_hat) = 0.083.
+
+**Not yet a result.** At n=100 the SE on a difference of proportions is ~0.065, so +0.16 is
+~2.5 SE. Real, not overwhelming. And it rests on one alpha.
+
+### The judging is broken, and it broke in the direction that fakes a dose-response
+
+733/1700 (43%) of fiction_jailbreaks and 954/1250 (76%) of XSTest went unjudged. Every failure
+was **HTTP 429**, not a content refusal. The losses are NOT evenly spread: judging runs in
+condition order, so baseline and α=17.8 came back complete while `steer_vc_neg` at α=−71.4 was
+judged on **1 of 100 rows**. `08_sweep_analysis` reads its headline off the LARGEST |alpha| —
+precisely the most decimated condition. **The curve above α=17.8 is currently a rate-limit
+curve wearing a dose-response costume.** Nothing above the lowest rung may be reported.
+
+Cause: the OpenAI SDK retries twice by default, against a per-minute token budget, at 8 workers.
+Fixes: `max_retries: 8` (the SDK honours Retry-After when given room), `max_workers: 8 → 4`,
+`06_judge.py --resume` to re-judge only the failures, `--max-failed` to fail the stage rather
+than emit an authoritative-looking partial summary, and `08_sweep_analysis` now REFUSES to
+interpret when any condition is missing >2% of its judgments.
+
+**The XSTest guard is the blocker.** At 76% missing it supports nothing, and note that
+`r_hat` reaching 0.99 refusal is exactly what global over-refusal looks like — until XSTest is
+re-judged we cannot say v_C's +0.16 is consequence awareness rather than a milder version of
+the same thing.
+
+### Committed the evidence trail
+
+55 JSONs: stored results (each with git SHA, input hashes, producing command), Rule-2 direction
+sidecars, sweep metadata. Scanned every one for prompt-shaped keys and free text first — clean.
+Excluded: 734 MB of caches, 46 `.pt`, and all `.jsonl` (generations and scored rows carry
+jailbreak prompts and completions; §7). Score summaries held back until judging is complete.
+
+**Next, in order:** (1) `06_judge.py --resume` on both files — costs a fraction of a pass;
+(2) re-run `08_sweep_analysis` and read the dose-response honestly; (3) the 50-judgment hand
+spot-check — the judge is still an unmeasured instrument; (4) then the write-up.
+
+---
+
 ## 2026-08-13 — Refactor: one script per research step, results cached on disk
 
 No new science this session. The pipeline was restructured because the notebook had become the

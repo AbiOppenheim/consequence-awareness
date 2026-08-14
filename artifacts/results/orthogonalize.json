@@ -1,0 +1,136 @@
+{
+  "result": {
+    "against": "r_hat",
+    "selected_layer": 18,
+    "by_layer": [
+      {
+        "layer": 8,
+        "cos_v_c_vs_ref": -0.046554502099752426,
+        "norm_fraction_removed": 0.046554502099752426,
+        "heldout_auc_v_c": 0.8548217516748986,
+        "heldout_auc_orth": 0.8548462027483006,
+        "cos_orth_vs_ref": 8.847564458847046e-09
+      },
+      {
+        "layer": 10,
+        "cos_v_c_vs_ref": -0.02609867788851261,
+        "norm_fraction_removed": 0.02609867788851261,
+        "heldout_auc_v_c": 0.8569000929140789,
+        "heldout_auc_orth": 0.8565088757396448,
+        "cos_orth_vs_ref": -7.450578820566989e-09
+      },
+      {
+        "layer": 12,
+        "cos_v_c_vs_ref": -0.07939601689577103,
+        "norm_fraction_removed": 0.07939601689577103,
+        "heldout_auc_v_c": 0.8728544183089638,
+        "heldout_auc_orth": 0.8716685412489608,
+        "cos_orth_vs_ref": 1.862645371275562e-09
+      },
+      {
+        "layer": 14,
+        "cos_v_c_vs_ref": -0.005217575468122959,
+        "norm_fraction_removed": 0.005217575468122959,
+        "heldout_auc_v_c": 0.911071446036481,
+        "heldout_auc_orth": 0.9111692503300894,
+        "cos_orth_vs_ref": 1.862645149230957e-09
+      },
+      {
+        "layer": 16,
+        "cos_v_c_vs_ref": 0.07769607752561569,
+        "norm_fraction_removed": 0.07769607752561569,
+        "heldout_auc_v_c": 0.9213286713286712,
+        "heldout_auc_orth": 0.9233825614944495,
+        "cos_orth_vs_ref": 2.514570951461792e-08
+      },
+      {
+        "layer": 18,
+        "cos_v_c_vs_ref": 0.08467476814985275,
+        "norm_fraction_removed": 0.08467476814985275,
+        "heldout_auc_v_c": 0.9350824001173651,
+        "heldout_auc_orth": 0.9355836471221087,
+        "cos_orth_vs_ref": 9.313224635931761e-10
+      },
+      {
+        "layer": 20,
+        "cos_v_c_vs_ref": 0.12062932550907135,
+        "norm_fraction_removed": 0.12062932550907135,
+        "heldout_auc_v_c": 0.9420998581837743,
+        "heldout_auc_orth": 0.9358770600029342,
+        "cos_orth_vs_ref": 1.6763804566721774e-08
+      },
+      {
+        "layer": 22,
+        "cos_v_c_vs_ref": 0.13629375398159027,
+        "norm_fraction_removed": 0.13629375398159027,
+        "heldout_auc_v_c": 0.9401315467749034,
+        "heldout_auc_orth": 0.9283583549317815,
+        "cos_orth_vs_ref": -1.0244550097127103e-08
+      },
+      {
+        "layer": 24,
+        "cos_v_c_vs_ref": 0.1734042465686798,
+        "norm_fraction_removed": 0.1734042465686798,
+        "heldout_auc_v_c": 0.9406205682429458,
+        "heldout_auc_orth": 0.9306812069049831,
+        "cos_orth_vs_ref": 5.587936779960501e-09
+      }
+    ],
+    "n_heldout_rows": 572
+  },
+  "_meta": {
+    "name": "orthogonalize",
+    "fingerprint": {
+      "inputs": {
+        "artifacts/activations/consequence_Qwen2.5-7B-Instruct.npz": "0490e3adb1ab69dc",
+        "artifacts/directions/r_hat_L10.pt": "7052c6ebd2ac86b2",
+        "artifacts/directions/r_hat_L12.pt": "4c68ae39829ebf10",
+        "artifacts/directions/r_hat_L14.pt": "b3a35c0a2f776d5c",
+        "artifacts/directions/r_hat_L16.pt": "5be10d3de14e21bf",
+        "artifacts/directions/r_hat_L18.pt": "a071bfa06e690adb",
+        "artifacts/directions/r_hat_L20.pt": "f88e00096e02742b",
+        "artifacts/directions/r_hat_L22.pt": "52dcd02b1d5a2664",
+        "artifacts/directions/r_hat_L24.pt": "74e8d6c5a1b70ffa",
+        "artifacts/directions/r_hat_L8.pt": "2e6b641e7eefaac5",
+        "artifacts/directions/v_c_L10.pt": "6abfc105fc8f932f",
+        "artifacts/directions/v_c_L12.pt": "173ff9c5c368d3c6",
+        "artifacts/directions/v_c_L14.pt": "182bcaea8686d286",
+        "artifacts/directions/v_c_L16.pt": "8fd14df6a20519cf",
+        "artifacts/directions/v_c_L18.pt": "a529cd83510a763e",
+        "artifacts/directions/v_c_L20.pt": "7fb592abf16453e5",
+        "artifacts/directions/v_c_L22.pt": "5f75c677964ace5d",
+        "artifacts/directions/v_c_L24.pt": "f207e918a9e64ab6",
+        "artifacts/directions/v_c_L8.pt": "b8964eeb36c6702d",
+        "artifacts/results/layer_select.json": "49f0c9a61a4fa568"
+      },
+      "params": {
+        "against": "r_hat",
+        "layers": [
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24
+        ],
+        "dataset": "consequence"
+      },
+      "code": {
+        "13_orthogonalize.py": "07646b7c20a12e2c",
+        "consequence/__init__.py": "e72d3c20839e0beb",
+        "consequence/acts.py": "ac9858fa73660c23",
+        "consequence/config.py": "5913a357ba3034d0",
+        "consequence/io.py": "4c33448e5e658bbd",
+        "consequence/probe.py": "7c52c27fa7171449",
+        "consequence/results.py": "6a3be71b9b999ca2"
+      },
+      "sha": "ccc62ffc4f7f2919"
+    },
+    "git_sha": "b2ec1e8",
+    "command": "scripts/13_orthogonalize.py",
+    "written": "2026-08-14 15:56:52"
+  }
+}

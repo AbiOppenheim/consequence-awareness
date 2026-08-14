@@ -2,7 +2,7 @@
   "command": "scripts/02_extract_directions.py --dataset consequence",
   "contrast": "real_minus_hypo",
   "d_model": 3584,
-  "git_sha": "94bfff8",
+  "git_sha": "b2ec1e8",
   "layer": 8,
   "method": "diff_in_means",
   "model_id": "Qwen/Qwen2.5-7B-Instruct",

@@ -2,7 +2,7 @@
   "command": "scripts/02_extract_directions.py --dataset persona_ut --kind v_mp",
   "contrast": "compliant_minus_restrictive",
   "d_model": 3584,
-  "git_sha": "94bfff8",
+  "git_sha": "b2ec1e8",
   "layer": 18,
   "method": "diff_in_means (our reimplementation of Zhong model_persona)",
   "model_id": "Qwen/Qwen2.5-7B-Instruct",

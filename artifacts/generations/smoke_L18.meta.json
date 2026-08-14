@@ -1,5 +1,6 @@
 {
   "eval": "smoke",
+  "eval_sha256": "bf95dbb54c4e2295",
   "model_id": "Qwen/Qwen2.5-7B-Instruct",
   "direction_layer": 18,
   "steer_layers": [

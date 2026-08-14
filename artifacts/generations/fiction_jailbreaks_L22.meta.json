@@ -2,15 +2,15 @@
   "eval": "fiction_jailbreaks",
   "eval_sha256": "31b698fae3982174",
   "model_id": "Qwen/Qwen2.5-7B-Instruct",
-  "direction_layer": 18,
+  "direction_layer": 22,
   "steer_layers": [
-    18
+    22
   ],
   "alphas": [
-    17.8,
-    35.7,
-    71.4,
-    142.7
+    35.2,
+    70.4,
+    140.8,
+    281.7
   ],
   "seed": 0,
   "n_prompts": 100,
@@ -19,7 +19,6 @@
     "steer_vc",
     "steer_vc_neg",
     "steer_random",
-    "steer_rhat",
-    "steer_v_c_orth_r_hat"
+    "steer_rhat"
   ]
 }

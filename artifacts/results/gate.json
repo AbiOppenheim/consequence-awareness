@@ -190,12 +190,12 @@
         "consequence/__init__.py": "e72d3c20839e0beb",
         "consequence/config.py": "5913a357ba3034d0",
         "consequence/io.py": "4c33448e5e658bbd",
-        "consequence/results.py": "2d35d512e7f733cf"
+        "consequence/results.py": "6a3be71b9b999ca2"
       },
-      "sha": "615e980f72020724"
+      "sha": "0986ab916e888121"
     },
-    "git_sha": "0d3e451",
+    "git_sha": "b2ec1e8",
     "command": "scripts/02b_gate.py",
-    "written": "2026-08-13 20:56:38"
+    "written": "2026-08-14 15:14:45"
   }
 }

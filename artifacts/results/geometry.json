@@ -143,7 +143,7 @@
         "artifacts/directions/v_mp_persona_ut_L22.pt": "45fd8d49a7e282f8",
         "artifacts/directions/v_mp_persona_ut_L24.pt": "fc80e05f4457a01b",
         "artifacts/directions/v_mp_persona_ut_L8.pt": "d63704d2c8d9d0c6",
-        "artifacts/results/layer_select.json": "f1e03676fa9f4f89"
+        "artifacts/results/layer_select.json": "49f0c9a61a4fa568"
       },
       "params": {
         "layers": [
@@ -166,12 +166,12 @@
         "consequence/config.py": "5913a357ba3034d0",
         "consequence/directions.py": "3f4107796c5ff60a",
         "consequence/io.py": "4c33448e5e658bbd",
-        "consequence/results.py": "2d35d512e7f733cf"
+        "consequence/results.py": "6a3be71b9b999ca2"
       },
-      "sha": "a9f10c0346d3e0c9"
+      "sha": "b0b13b891b1d0e7f"
     },
-    "git_sha": "412988d",
+    "git_sha": "b2ec1e8",
     "command": "scripts/04_geometry.py",
-    "written": "2026-08-13 22:38:54"
+    "written": "2026-08-14 15:17:12"
   }
 }

@@ -2,7 +2,7 @@
   "command": "scripts/02b_gate.py",
   "contrast": "harmful_minus_harmless",
   "d_model": 3584,
-  "git_sha": "94bfff8",
+  "git_sha": "b2ec1e8",
   "layer": 18,
   "method": "diff_in_means via Arditi generate_directions",
   "model_id": "Qwen/Qwen2.5-7B-Instruct",

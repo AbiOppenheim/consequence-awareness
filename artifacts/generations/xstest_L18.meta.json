@@ -1,5 +1,6 @@
 {
   "eval": "xstest",
+  "eval_sha256": "f94669f385fbc58b",
   "model_id": "Qwen/Qwen2.5-7B-Instruct",
   "direction_layer": 18,
   "steer_layers": [

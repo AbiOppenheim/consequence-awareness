@@ -206,7 +206,7 @@
         "artifacts/directions/v_c_L22.pt": "5f75c677964ace5d",
         "artifacts/directions/v_c_L24.pt": "f207e918a9e64ab6",
         "artifacts/directions/v_c_L8.pt": "b8964eeb36c6702d",
-        "artifacts/results/layer_select.json": "f1e03676fa9f4f89",
+        "artifacts/results/layer_select.json": "49f0c9a61a4fa568",
         "data/contrast/consequence.jsonl": "13a64f401421bb26"
       },
       "params": {
@@ -232,12 +232,12 @@
         "consequence/config.py": "5913a357ba3034d0",
         "consequence/io.py": "4c33448e5e658bbd",
         "consequence/probe.py": "7c52c27fa7171449",
-        "consequence/results.py": "2d35d512e7f733cf"
+        "consequence/results.py": "6a3be71b9b999ca2"
       },
-      "sha": "d758d5853997b07d"
+      "sha": "fdf8fe29ce87886f"
     },
-    "git_sha": "412988d",
+    "git_sha": "b2ec1e8",
     "command": "scripts/10_redteam_heldout.py",
-    "written": "2026-08-13 22:38:33"
+    "written": "2026-08-14 15:16:43"
   }
 }

@@ -78,12 +78,12 @@
         "consequence/config.py": "5913a357ba3034d0",
         "consequence/io.py": "4c33448e5e658bbd",
         "consequence/probe.py": "7c52c27fa7171449",
-        "consequence/results.py": "2d35d512e7f733cf"
+        "consequence/results.py": "6a3be71b9b999ca2"
       },
-      "sha": "d9f9bc08f6167f24"
+      "sha": "ba440f1bc3c660ed"
     },
-    "git_sha": "412988d",
+    "git_sha": "b2ec1e8",
     "command": "scripts/03_probe.py --dataset consequence",
-    "written": "2026-08-13 22:37:58"
+    "written": "2026-08-14 15:16:06"
   }
 }

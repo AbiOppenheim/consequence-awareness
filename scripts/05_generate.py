@@ -25,6 +25,7 @@ are skipped unless --force.
 """
 
 import argparse
+import hashlib
 import json
 from collections import Counter
 from pathlib import Path
@@ -167,13 +168,31 @@ def main() -> None:
         seed=cfg["seed"],
     )
 
-    prompts = [r.get("text", r.get("prompt"))
-               for r in D.load_jsonl(resolve(cfg["data"][args.eval]))]
+    eval_path = resolve(cfg["data"][args.eval])
+    prompts = [r.get("text", r.get("prompt")) for r in D.load_jsonl(eval_path)]
+    eval_sha = hashlib.sha256(eval_path.read_bytes()).hexdigest()[:16]
     ddir = resolve(cfg["paths"]["directions"])
     out = resolve(cfg["paths"]["generations"]) / f"{args.eval}_L{layer}.jsonl"
+    meta_path = out.with_suffix(".meta.json")
     if args.force and out.exists():
         out.unlink()
     already = done_keys(out, len(prompts))
+
+    # Resumption trusts that the prompt set has not moved underneath it. The attack file is
+    # gitignored and rebuilt by phase5_build_eval.py, so a recycled runtime regenerates it —
+    # deterministically today, but a revised upstream snapshot or a changed filter would leave
+    # old completions in the same file as new prompts, indexed by position, with no symptom.
+    # Stage 01 has guarded exactly this since the dataset-hash check; stage 05 now does too.
+    if already and meta_path.exists():
+        prior_sha = json.loads(meta_path.read_text()).get("eval_sha256")
+        if prior_sha and prior_sha != eval_sha:
+            raise SystemExit(
+                f"[STALE] {out.name} was generated from a different {eval_path.name}\n"
+                f"        recorded {prior_sha} != current {eval_sha}\n"
+                "        The prompt set changed since those generations were made. Either restore\n"
+                "        the original eval file, or re-run with --force to regenerate all\n"
+                "        conditions against the current one. Resuming would mix the two."
+            )
 
     v_c, _ = io.load_direction(ddir / f"v_c_L{layer}")
     rand, _ = io.load_direction(ddir / f"random_L{layer}")
@@ -214,9 +233,10 @@ def main() -> None:
             "record it."
         )
 
-    meta = out.with_suffix(".meta.json")
+    meta = meta_path
     meta.write_text(json.dumps({
-        "eval": args.eval, "model_id": cfg["model"]["id"], "direction_layer": layer,
+        "eval": args.eval, "eval_sha256": eval_sha,
+        "model_id": cfg["model"]["id"], "direction_layer": layer,
         "steer_layers": layers, "alphas": alphas, "seed": cfg["seed"],
         "n_prompts": len(prompts),
         # `if r_hat` on a tensor raises: truthiness of a multi-element tensor is ambiguous.

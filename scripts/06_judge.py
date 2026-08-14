@@ -26,17 +26,27 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/qwen.yaml")
     ap.add_argument("--generations", required=True)
+    ap.add_argument("--limit", type=int, default=None,
+                    help="judge only the first N rows. Use it once against the live API before "
+                         "spending on the full file: it proves the key, the model name and the "
+                         "structured-output request are all accepted, for a fraction of a cent. "
+                         "Writes to a _limitN_scored.jsonl so it cannot be mistaken for a "
+                         "complete scoring.")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
     rows = D.load_jsonl(args.generations)
+    if args.limit:
+        rows = rows[:args.limit]
+        print(f"[judge] --limit {args.limit}: TRIAL RUN, not a complete scoring")
     jcfg = cfg["judge"]
     scored = J.score_batch(rows, model=jcfg["model"],
                            provider=jcfg.get("provider", "openai"),
                            use_batch_api=jcfg.get("use_batch_api", False),
                            max_workers=jcfg.get("max_workers", 8))
 
-    out = resolve(cfg["paths"]["scores"]) / (Path(args.generations).stem + "_scored.jsonl")
+    suffix = f"_limit{args.limit}_scored.jsonl" if args.limit else "_scored.jsonl"
+    out = resolve(cfg["paths"]["scores"]) / (Path(args.generations).stem + suffix)
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w") as f:
         for r in scored:

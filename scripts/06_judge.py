@@ -22,6 +22,11 @@ from consequence import judge as J
 from consequence.config import load_config, resolve
 
 
+def key(row: dict) -> tuple:
+    """Identifies one generation across the generations file and the scored file."""
+    return (row["condition"], row.get("alpha"), row.get("idx"))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/qwen.yaml")
@@ -56,13 +61,20 @@ def main() -> None:
     if args.resume:
         if not out.exists():
             raise SystemExit(f"--resume needs an existing {out.name} to resume from")
-        prior = D.load_jsonl(out)
-        if len(prior) != len(rows):
-            raise SystemExit(f"{out.name} has {len(prior)} rows, {args.generations} has "
-                             f"{len(rows)} — different runs; drop --resume")
-        kept = [r for r in prior if r.get("label") in J.LABELS]
-        rows = [r for r in prior if r.get("label") not in J.LABELS]
-        print(f"[resume] {len(kept)} verdicts kept, re-judging {len(rows)} that failed")
+        # Match on (condition, alpha, idx), never on row count. The generations file GROWS when
+        # a condition is appended — `05_generate.py --extra-direction` does exactly that — so a
+        # length check would reject the most common reason to resume after the first one.
+        # The generations file is the source of truth: a verdict is kept only if its row is
+        # still there, and every row without a successful verdict gets judged.
+        prior = {key(r): r for r in D.load_jsonl(out)}
+        kept, todo = [], []
+        for r in rows:
+            got = prior.get(key(r))
+            (kept if got and got.get("label") in J.LABELS else todo).append(got or r)
+        new = sum(1 for r in todo if key(r) not in prior)
+        rows = todo
+        print(f"[resume] {len(kept)} verdicts kept | {len(rows) - new} to re-judge, "
+              f"{new} never judged")
         if not rows:
             print("[resume] nothing left to judge")
 
@@ -73,8 +85,8 @@ def main() -> None:
                            max_retries=jcfg.get("max_retries", 8)) if rows else []
     scored = kept + judged
     # Keep the generation order, so the scored file lines up with the generations file.
-    order = {(r["condition"], r.get("alpha"), r.get("idx")): i for i, r in enumerate(D.load_jsonl(args.generations))}
-    scored.sort(key=lambda r: order.get((r["condition"], r.get("alpha"), r.get("idx")), 0))
+    order = {key(r): i for i, r in enumerate(D.load_jsonl(args.generations))}
+    scored.sort(key=lambda r: order.get(key(r), 0))
 
     n_failed = sum(r.get("label") not in J.LABELS for r in scored)
     frac = n_failed / max(len(scored), 1)

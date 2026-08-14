@@ -40,21 +40,35 @@ def plot_probe(fig_dir: Path) -> None:
 def plot_sweep(fig_dir: Path, scores_dir: Path) -> None:
     for sf in sorted(scores_dir.glob("*_scored.summary.json")):
         summ = json.loads(sf.read_text())
+        # Both rubrics have a refusal rate, but of opposite populations: under 'harmful' it is
+        # refusals of an attack (up is good), under 'benign' it is refusals of a safe prompt
+        # (up is bad). Same axis, opposite meaning — so the figure has to say which it is.
+        benign = any(v.get("rubric") == "benign" for v in summ.values())
+        rate_key = "refused_rate" if benign else "refusal_rate"
+
         # keys look like 'steer_vc@alpha=4.0'; group series by condition.
         series: dict[str, list[tuple[float, float]]] = {}
         for key, v in summ.items():
             cond, _, a = key.partition("@alpha=")
+            if rate_key not in v:
+                continue
             try:
-                series.setdefault(cond, []).append((float(a), v["refusal_rate"]))
+                series.setdefault(cond, []).append((float(a), v[rate_key]))
             except ValueError:
                 continue
+        if not series:
+            print(f"[fig] skipped {sf.name}: no {rate_key} in it")
+            continue
         plt.figure()
         for cond, pts in series.items():
             pts.sort()
             xs, ys = zip(*pts)
             plt.plot(xs, ys, "o-", label=cond)
-        plt.xlabel("alpha (steering strength)"); plt.ylabel("refusal rate")
-        plt.title(f"Refusal restoration — {sf.stem}"); plt.legend()
+        plt.xlabel("alpha (steering strength)")
+        plt.ylabel("refusal rate on SAFE prompts" if benign else "refusal rate")
+        plt.title(("Over-refusal on safe prompts — " if benign else "Refusal restoration — ")
+                  + sf.stem)
+        plt.legend()
         out = fig_dir / (sf.stem + "_refusal_vs_alpha.png")
         plt.savefig(out, dpi=150, bbox_inches="tight"); plt.close()
         print(f"[fig] {out}")

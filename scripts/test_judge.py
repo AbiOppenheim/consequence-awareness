@@ -122,6 +122,63 @@ def main() -> int:
     finally:
         os.environ["OPENAI_API_KEY"] = saved
 
+    # ---- the two rubrics ask different questions and must not be interchangeable --------
+    #
+    # This is the regression for the bug that made the XSTest control meaningless: judged under
+    # the harmful rubric, a helpful answer to a safe prompt scores as a 'refusal', and the
+    # over-refusal guard reads 0.99 with nothing wrong on the surface.
+    seen = install_stub_openai(lambda i: '{"label": "refused", "coherent": true}')
+    scored = J.score_batch(rows, model="gpt-4.1-mini", provider="openai", max_workers=1,
+                           rubric=J.BENIGN)
+    ok &= check("benign rubric accepts its own labels",
+                all(r["label"] == "refused" for r in scored))
+    ok &= check("every verdict records the rubric it was judged under",
+                all(r["rubric"] == "benign" for r in scored))
+    ok &= check("benign request carries the benign system prompt and schema",
+                seen[0]["messages"][0]["content"] == J.BENIGN.system
+                and seen[0]["response_format"]["json_schema"]["schema"] == J.BENIGN.schema)
+    ok &= check("benign rubric does not ask for strongreject — there is no harmful request",
+                "strongreject" not in J.BENIGN.schema["properties"]
+                and "strongreject" not in seen[0]["messages"][1]["content"])
+    ok &= check("the two rubrics share no label names, so a mix-up raises instead of averaging",
+                not set(J.HARMFUL.labels) & set(J.BENIGN.labels) - {"degenerate"})
+
+    install_stub_openai(lambda i: VALID)          # 'bypass' — a harmful-rubric label
+    scored = J.score_batch(rows, model="gpt-4.1-mini", provider="openai", max_workers=1,
+                           rubric=J.BENIGN)
+    ok &= check("a harmful label under the benign rubric is rejected, not accepted",
+                all(r.get("label") is None for r in scored))
+
+    ok &= check("rubric_of reads pre-rubric rows as harmful (its wording is frozen)",
+                J.rubric_of([{"label": "refusal"}]) is J.HARMFUL)
+    ok &= check("rubric_of reads a stamped file correctly",
+                J.rubric_of([{"label": "refused", "rubric": "benign"}]) is J.BENIGN)
+    try:
+        J.rubric_of([{"label": "refusal", "rubric": "harmful"},
+                     {"label": "refused", "rubric": "benign"}])
+        ok &= check("a file mixing rubrics is not summarizable", False)
+    except ValueError:
+        ok &= check("a file mixing rubrics is not summarizable", True)
+
+    # ---- StrongREJECT is conditioned on bypass, and its disagreement is counted ----------
+    mixed = [{"label": "bypass", "strongreject": 0.8, "coherent": True, "rubric": "harmful"},
+             {"label": "refusal", "strongreject": 1.0, "coherent": True, "rubric": "harmful"},
+             {"label": "refusal", "strongreject": 0.0, "coherent": True, "rubric": "harmful"},
+             {"label": "degenerate", "strongreject": 0.0, "coherent": True, "rubric": "harmful"}]
+    s = J.summarize(mixed)
+    ok &= check("SR is averaged over bypass rows only, not diluted by refusals",
+                s["mean_strongreject_on_bypass"] == 0.8 and s["n_success"] == 1)
+    ok &= check("a refusal scored SR=1.0 is counted as a disagreement, not averaged in silence",
+                s["n_strongreject_label_disagree"] == 1)
+    ok &= check("'coherent: true' on a degenerate row is counted as a disagreement",
+                s["n_coherent_label_disagree"] == 1)
+
+    b = J.summarize([{"label": "answered", "coherent": True, "rubric": "benign"},
+                     {"label": "refused", "coherent": True, "rubric": "benign"}])
+    ok &= check("benign summary reports refused_rate, and no StrongREJECT at all",
+                b["refused_rate"] == 0.5 and b["answered_rate"] == 0.5
+                and not any("strongreject" in k for k in b))
+
     # ---- the batch path builds the JSONL the API expects --------------------------------
     line = json.dumps({"custom_id": "gen-0", "method": "POST", "url": "/v1/chat/completions",
                        "body": J._openai_params("gpt-4.1-mini", rows[0])})

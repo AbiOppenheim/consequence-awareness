@@ -131,6 +131,7 @@ def main() -> None:
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--source", default="in_the_wild")
     ap.add_argument("--limit", type=int, default=100, help="~100 attacks is the sweep budget")
+    ap.add_argument("--force", action="store_true", help="rebuild even if the file exists")
     args = ap.parse_args()
 
     if not (args.xstest or args.jailbreaks or args.all):
@@ -143,6 +144,13 @@ def main() -> None:
                            (args.jailbreaks or args.all, "fiction_jailbreaks",
                             lambda: build_jailbreaks(args.source, args.limit))):
         if not want:
+            continue
+        # Resumable (Rule 4). These files are gitignored, so every recycled runtime has to
+        # rebuild them — which makes it worth being safe to call at the top of any cell that
+        # needs them, rather than a step you have to remember exactly once per VM.
+        dest = EVAL / f"{name}.jsonl"
+        if dest.exists() and not args.force:
+            print(f"[skip] {dest.name} exists ({sum(1 for _ in open(dest))} rows)")
             continue
         try:
             fn()

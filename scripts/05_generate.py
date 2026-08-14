@@ -169,6 +169,15 @@ def main() -> None:
     )
 
     eval_path = resolve(cfg["data"][args.eval])
+    if not eval_path.exists():
+        # data/eval/* is gitignored (this repo does not redistribute an attack set), so it is
+        # absent on every fresh runtime. Say which command rebuilds it rather than surfacing a
+        # FileNotFoundError from three frames down in a loader.
+        raise SystemExit(
+            f"missing {results.relname(eval_path)} — the eval sets are gitignored and are "
+            "rebuilt, not cloned.\n"
+            f"  Run:  python scripts/phase5_build_eval.py --all --limit 100"
+        )
     prompts = [r.get("text", r.get("prompt")) for r in D.load_jsonl(eval_path)]
     eval_sha = hashlib.sha256(eval_path.read_bytes()).hexdigest()[:16]
     ddir = resolve(cfg["paths"]["directions"])

@@ -98,14 +98,22 @@ def resolve_layer(value: str, results_dir) -> int:
     return layer
 
 
-def resolve_alphas(values: list[str], cfg, results_dir) -> list[float]:
+def resolve_alphas(values: list[str], cfg, results_dir, layer: int) -> list[float]:
     """'auto' -> step 11's calibrated ladder; 'config' -> steer.alphas; else the values given.
 
     alpha=0 is dropped in every mode: it is the baseline condition, which runs once on its own
     rather than once per rung.
     """
     if values == ["auto"]:
-        res, _ = results.load("alpha_ladder", results_dir)
+        # Per-layer, because residual norms grow with depth: L18's ladder is the wrong dose at
+        # L22. Falls back to the un-suffixed name for ladders calibrated before that split.
+        try:
+            res, _ = results.load(f"alpha_ladder_L{layer}", results_dir)
+        except FileNotFoundError:
+            res, _ = results.load("alpha_ladder", results_dir)
+            print(f"[warn] no alpha_ladder_L{layer} — using the un-suffixed ladder, calibrated "
+                  f"at L{res['layer']}. Re-run 11_calibrate_alpha.py --layer {layer} if these "
+                  "differ.")
         print(f"[auto] alphas {res['alphas']} = {res['fractions']} x the median residual norm "
               f"at L{res['layer']}")
         values = res["alphas"]
@@ -125,6 +133,11 @@ def main() -> None:
     ap.add_argument("--window", type=int, default=1,
                     help="steer at layers [layer-w+1 .. layer]; 1 = only the extraction layer")
     ap.add_argument("--force", action="store_true", help="regenerate conditions already present")
+    ap.add_argument("--extra-direction", action="append", default=[], metavar="STEM",
+                    help="also sweep this direction, e.g. --extra-direction v_c_orth_r_hat. "
+                         "Loads artifacts/directions/STEM_L{layer}.pt and adds a condition "
+                         "'steer_STEM' at every alpha. Repeatable. Appends to the SAME output "
+                         "file, so resumption keeps the conditions already generated.")
     ap.add_argument("--batch-size", type=int, default=None,
                     help="override generate.batch_size. The first thing to lower on a CUDA OOM; "
                          "it changes throughput, not the greedy completions.")
@@ -137,7 +150,7 @@ def main() -> None:
     cfg = load_config(args.config)
     rdir = resolve(cfg["paths"]["results"])
     layer = resolve_layer(args.layer, rdir)
-    alphas = resolve_alphas(args.alphas, cfg, rdir)
+    alphas = resolve_alphas(args.alphas, cfg, rdir, layer)
     if not alphas:
         raise SystemExit("no non-zero alphas — run scripts/11_calibrate_alpha.py, pass --alphas, "
                          "or set steer.alphas in the config")
@@ -171,14 +184,21 @@ def main() -> None:
     else:
         print(f"[warn] {rh_path.name} missing — skipping the r_hat reference condition")
 
+    extra = []
+    for stem in args.extra_direction:
+        vec, meta_x = io.load_direction(ddir / f"{stem}_L{layer}")
+        extra.append((f"steer_{stem}", vec))
+        print(f"[sweep] extra direction {stem}_L{layer} ({meta_x.get('method', '?')})")
+
     print(f"[sweep] {len(prompts)} prompts | steer layers {layers} | alphas {alphas}")
-    n_cond = 1 + len(alphas) * (3 + (1 if r_hat is not None else 0))
+    n_cond = 1 + len(alphas) * (3 + (1 if r_hat is not None else 0) + len(extra))
     print(f"[sweep] {n_cond} conditions -> ~{n_cond * len(prompts)} generations")
 
     model, tok = A.load_model(cfg["model"]["id"], cfg["model"]["dtype"])
 
     try:
-        run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, rand, r_hat)
+        run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, rand,
+                r_hat, extra)
     except torch.cuda.OutOfMemoryError:
         done = len(done_keys(out, len(prompts)))
         raise SystemExit(
@@ -201,12 +221,14 @@ def main() -> None:
         "n_prompts": len(prompts),
         # `if r_hat` on a tensor raises: truthiness of a multi-element tensor is ambiguous.
         "conditions": ["baseline", "steer_vc", "steer_vc_neg", "steer_random"]
-                      + (["steer_rhat"] if r_hat is not None else []),
+                      + (["steer_rhat"] if r_hat is not None else [])
+                      + [n for n, _ in extra],
     }, indent=2))
     print(f"[write] {out}\n[write] {meta}")
 
 
-def run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, rand, r_hat):
+def run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, rand,
+            r_hat, extra=()):
     """Every condition in the sweep, skipping the ones already complete."""
     if ("baseline", 0.0) not in already:
         G.run_condition(model, tok, prompts, out, condition="baseline", gen_kwargs=gen_kwargs)
@@ -220,6 +242,7 @@ def run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, 
         ]
         if r_hat is not None:
             conds.append(("steer_rhat", r_hat, +alpha))
+        conds += [(name, vec, +alpha) for name, vec in extra]
         for name, vec, a in conds:
             if (name, a) in already:
                 print(f"[skip] {name} alpha={a} already generated")

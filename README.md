@@ -68,15 +68,27 @@ renders their stored results; it computes nothing itself.
 | 04 | `04_geometry.py` | — | directions → `results/geometry.json` (cosines vs `r̂`/`v_MP` + null band) |
 | 09 | `09_heldout.py` | — | held-out reveal → `results/heldout.json` (**run once**) |
 | 10 | `10_redteam_heldout.py` | — | per-route, per-layer, TF-IDF, 100-draw null → `results/heldout_redteam.json` |
-| 11 | `11_calibrate_alpha.py` | — | residual norms → `results/alpha_ladder.json` |
+| 11 | `11_calibrate_alpha.py [--layer L]` | — | residual norms → `results/alpha_ladder_L*.json` |
 | 05 | `05_generate.py --eval E` | ✅ | eval prompts under steer/knockout → `generations/*.jsonl` |
-| 06 | `06_judge.py` | — | generations → refusal/bypass/degenerate + StrongREJECT |
-| 08 | `08_sweep_analysis.py` | — | scores → the four readings of the sweep |
+| 06 | `06_judge.py [--resume]` | — | generations → refusal/bypass/degenerate + StrongREJECT |
+| 08 | `08_sweep_analysis.py` | — | scores → `results/sweep_L*.json` + the four readings |
+| 13 | `13_orthogonalize.py` | — | `v_C` minus its `r̂` component → `directions/v_c_orth_r_hat_L*.pt`, `results/orthogonalize.json` |
 | 07 | `07_figures.py` | — | analysis JSONs → figures |
 
-Steps 09, 10, 11 and 05 read the selected layer from `results/layer_select.json`, and 05 reads
-the α ladder from `results/alpha_ladder.json` (`--layer auto --alphas auto`, the defaults), so
-the layer and the ladder are never retyped into a command or carried in a notebook variable.
+Steps 09, 10, 11, 13 and 05 read the selected layer from `results/layer_select.json`, and 05
+reads the α ladder from `results/alpha_ladder_L{layer}.json` (`--layer auto --alphas auto`, the
+defaults), so the layer and the ladder are never retyped into a command or carried in a notebook
+variable. The ladder is per-layer because residual norms grow with depth: the same raw α is a
+different dose at L22 than at L18, and layers are only comparable as fractions of ‖h‖.
+
+`05_generate.py --extra-direction STEM` adds any minted direction as an extra swept condition,
+appending to the same output file so resumption keeps what already ran. That is how the
+orthogonalized `v_C` is tested causally.
+
+**Offline tests** (no GPU, no API, no cost): `test_hooks.py` (steering hits the layer `v_C` was
+measured at, under both HF block conventions), `test_generate.py` (batched generation is
+padding-safe), `test_judge.py` (judge request shape, per-row failures, and that a failed
+judgment is never counted as a refusal). Each was verified to fail against the bug it pins.
 
 `r_hat` is minted per layer by step 02b from the cube that Arditi's repo writes into
 `artifacts/directions/` — see `external/README.md`. `v_MP` is our reimplementation of Zhong's

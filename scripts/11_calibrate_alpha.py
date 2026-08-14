@@ -26,7 +26,7 @@ from consequence import acts as A
 from consequence import results
 from consequence.config import load_config, resolve
 
-NAME = "alpha_ladder"
+NAME = "alpha_ladder"   # stored per layer: alpha_ladder_L18, alpha_ladder_L22, ...
 FRACTIONS = [0.25, 0.5, 1.0, 2.0]      # of the median residual norm at the steering layer
 
 
@@ -35,6 +35,11 @@ def main() -> None:
     ap.add_argument("--config", default="configs/qwen.yaml")
     ap.add_argument("--dataset", default="consequence")
     ap.add_argument("--fractions", type=float, nargs="+", default=FRACTIONS)
+    ap.add_argument("--layer", type=int, default=None,
+                    help="calibrate at this layer instead of the selected one. Residual norms "
+                         "grow with depth, so a ladder calibrated at L18 is the wrong dose at "
+                         "L22 — comparing layers requires comparing fractions of ||h||, not "
+                         "raw alphas.")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
@@ -42,7 +47,10 @@ def main() -> None:
     rdir = resolve(cfg["paths"]["results"])
     model_slug = cfg["model"]["id"].split("/")[-1]
     acts_path = resolve(cfg["paths"]["activations"]) / f"{args.dataset}_{model_slug}.npz"
-    layer, layer_file = results.selected_layer(rdir)
+    if args.layer:
+        layer, layer_file = args.layer, results.path_for("layer_select", rdir)
+    else:
+        layer, layer_file = results.selected_layer(rdir)
 
     def run() -> dict:
         acts, _, _ = A.load_acts(acts_path)
@@ -59,7 +67,7 @@ def main() -> None:
         }
 
     res = results.compute(
-        NAME, run,
+        f"{NAME}_L{layer}", run,
         inputs=[acts_path, layer_file],
         params={"dataset": args.dataset, "fractions": list(args.fractions)},
         entry=__file__, force=args.force, results_dir=rdir,

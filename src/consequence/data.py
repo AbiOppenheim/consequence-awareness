@@ -61,11 +61,28 @@ def load_labeled(path: str | Path):
     return prompts, labels, groups, splits
 
 
+def load_eval(path: str | Path):
+    """An evaluation set (data/eval/*.jsonl): prompts with no contrast label.
+
+    Rows are {id, text, source, attack_family}. There is no real/hypo or harmful/harmless
+    label to learn from — these are the prompts we MEASURE, so labels come back as -1 to make
+    that explicit rather than defaulting to a class. `attack_family` becomes the group, which
+    is what stage 12 slices the projections by.
+    """
+    rows = load_jsonl(path)
+    prompts = [r.get("text", r.get("prompt")) for r in rows]
+    labels = np.full(len(rows), -1)
+    groups = np.array([str(r.get("attack_family", "na")) for r in rows])
+    splits = np.array(["eval"] * len(rows))
+    return prompts, labels, groups, splits
+
+
 def load_contrast(path: str | Path):
-    """Load any contrast dataset, dispatching on its schema.
+    """Load any contrast or eval dataset, dispatching on its schema.
 
     Consequence rows have a `framing` field (real/hypo); generic labeled rows have a `label`
-    field (1/0). Both return (prompts, labels, groups, splits), so callers stay uniform.
+    field (1/0); eval rows have `attack_family` and no label at all. All three return
+    (prompts, labels, groups, splits), so callers stay uniform.
     """
     rows = load_jsonl(path)
     if not rows:
@@ -78,6 +95,10 @@ def load_contrast(path: str | Path):
         return load_labeled(path)
     if "framing" in first:
         return load_consequence(path)
+    # Checked last, and on an explicit marker: an eval set is defined by having no contrast
+    # label, and "no label" is exactly the condition a silent mis-dispatch would also produce.
+    if "attack_family" in first:
+        return load_eval(path)
     raise ValueError(f"unrecognized contrast schema in {path}: keys={sorted(first)}")
 
 

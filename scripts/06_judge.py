@@ -97,9 +97,15 @@ def main() -> None:
     out = resolve(cfg["paths"]["scores"]) / (Path(args.generations).stem + suffix)
 
     kept = []
+    if args.resume and not out.exists():
+        # "Resume" degrades to "judge everything" rather than failing. This used to be a hard
+        # error, which made --resume unsafe to leave in a notebook cell: the flag is there so a
+        # cell can be re-run without re-paying, and on the FIRST run of a new eval set there is
+        # nothing to resume from, so the cell died after the expensive stage that precedes it.
+        # Nothing is silently overspent — the row count is printed before any request goes out.
+        print(f"[resume] no {out.name} yet — judging all {len(rows)} rows")
+        args.resume = False
     if args.resume:
-        if not out.exists():
-            raise SystemExit(f"--resume needs an existing {out.name} to resume from")
         # Match on (condition, alpha, idx), never on row count. The generations file GROWS when
         # a condition is appended — `05_generate.py --extra-direction` does exactly that — so a
         # length check would reject the most common reason to resume after the first one.

@@ -68,15 +68,15 @@
       "code": {
         "12_project_evals.py": "9f0fa9f2b3658647",
         "consequence/__init__.py": "e72d3c20839e0beb",
-        "consequence/acts.py": "ac9858fa73660c23",
+        "consequence/acts.py": "2a28aba05ff98896",
         "consequence/config.py": "5913a357ba3034d0",
         "consequence/io.py": "4c33448e5e658bbd",
         "consequence/results.py": "6a3be71b9b999ca2"
       },
-      "sha": "4e04297d31a6ba41"
+      "sha": "d25aca453f5c1fb2"
     },
-    "git_sha": "64e9ec8",
+    "git_sha": "8dc1f95",
     "command": "scripts/12_project_evals.py",
-    "written": "2026-08-14 16:18:36"
+    "written": "2026-08-17 14:42:11"
   }
 }

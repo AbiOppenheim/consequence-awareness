@@ -191,14 +191,49 @@ def within_attack(acts_path, scores_path, gen_meta_path, ddir, layer, rng) -> di
                 "underpowered": "fewer than 5 in one class — no test attempted"}
 
     v_c, _ = io.load_direction(ddir / f"v_c_L{layer}")
+    v_c = np.asarray(v_c, dtype=np.float64)
     # Negated so the score means "more hypothetical": v_C points toward REAL.
     Xh = -X
-    auc = float(roc_auc_score(y, Xh @ np.asarray(v_c, dtype=np.float64)))
+    s_vc = Xh @ v_c
+    auc = float(roc_auc_score(y, s_vc))
+
+    # Is the signal just prompt size? Longer attacks have systematically different activations,
+    # and the raw norm is itself a weak predictor here, so v_C is re-scored with the linear norm
+    # component removed. A large drop would mean this matched split has a confound too.
+    nrm = np.linalg.norm(X, axis=1)
+    resid = s_vc - np.polyval(np.polyfit(nrm, s_vc, 1), nrm)
+
+    # Paired comparison against the persona direction, over the SAME rows — the only way to say
+    # which predicts better without being fooled by two noisy point estimates.
+    vs_persona = None
+    rival_path = ddir / f"v_mp_persona_ut_L{layer}.pt"
+    if rival_path.exists():
+        v_mp = np.asarray(io.load_direction(rival_path)[0], dtype=np.float64)
+        s_mp = Xh @ v_mp
+        deltas = []
+        for _ in range(N_BOOT):
+            i = rng.integers(0, y.size, y.size)
+            if y[i].sum() < 5 or (1 - y[i]).sum() < 5:
+                continue
+            deltas.append(roc_auc_score(y[i], s_mp[i]) - roc_auc_score(y[i], s_vc[i]))
+        d = np.asarray(deltas)
+        vs_persona = {
+            "rival": "v_mp_persona_ut",
+            "auc_rival": float(roc_auc_score(y, s_mp)),
+            "delta": float(roc_auc_score(y, s_mp) - auc),
+            "ci95": [float(np.quantile(d, 0.025)), float(np.quantile(d, 0.975))],
+            "p_rival_better": float((d > 0).mean()),
+            "cos": float(v_c @ v_mp),
+        }
+
     return {
         "n": int(y.size),
         "n_bypass": int(y.sum()),
         "n_refusal": int((1 - y).sum()),
         "auc_vc": auc,
+        "auc_vc_norm_residualised": float(roc_auc_score(y, resid)),
+        "corr_score_norm": float(np.corrcoef(s_vc, nrm)[0, 1]),
+        "vs_persona": vs_persona,
         "boot": auc_with_ci(
             (Xh[y == 0] @ np.asarray(v_c, dtype=np.float64)),
             (Xh[y == 1] @ np.asarray(v_c, dtype=np.float64)), rng),
@@ -369,8 +404,15 @@ def report(res: dict, missing) -> None:
               f"[{b['ci95'][0]:.3f}, {b['ci95'][1]:.3f}]")
         print(f"  {rb['n_draws']} random directions: mean |AUC-0.5| {rb['mean_abs_dev']:.3f}, "
               f"p95 {rb['p95_abs_dev']:.3f}  ->  p = {rb['p_value']:.3f}")
+        print(f"  controlling for prompt size: {w['auc_vc_norm_residualised']:.3f} "
+              f"(corr with ||h|| = {w['corr_score_norm']:+.3f})")
         print("  same split scored by other directions: " + "  ".join(
             f"{k}={v:.3f}" for k, v in w["other_directions"].items()))
+        pv = w.get("vs_persona")
+        if pv:
+            print(f"  PAIRED vs {pv['rival']}: {pv['auc_rival']:.3f} - {w['auc_vc']:.3f} = "
+                  f"{pv['delta']:+.3f}  95% CI [{pv['ci95'][0]:+.3f}, {pv['ci95'][1]:+.3f}]  "
+                  f"cos={pv['cos']:+.2f}")
 
     h = res.get("cross_set_diagnostic")
     print("\n=== DIAGNOSTIC (confounded, not a result): attacks vs plain harmful prompts ===")
@@ -454,13 +496,26 @@ def readings(res: dict) -> list[str]:
         out.append(f"v_C predicts which attacks succeed: AUC {w['auc_vc']:.3f}, p = "
                    f"{rb['p_value']:.3f} vs {rb['n_draws']} random directions, on prompts "
                    "matched by construction. This is the correlational claim.")
-    rival = max(((k, v) for k, v in od.items() if k.startswith("v_mp")), default=None,
-                key=lambda kv: abs(kv[1] - 0.5))
-    if rival and abs(rival[1] - 0.5) > abs(w["auc_vc"] - 0.5):
-        out.append(f"PERSONA BEATS CONSEQUENCE on the same split: {rival[0]} reaches "
-                   f"{rival[1]:.3f} against v_C's {w['auc_vc']:.3f}. Zhong's explanation "
-                   "predicts exactly this. Report it, and run the v_MP steering control before "
-                   "claiming the mechanism is about consequence.")
+    # Comparing two AUCs by their point estimates is not a comparison. An earlier version fired
+    # "PERSONA BEATS CONSEQUENCE" on a 0.084 gap at n=98 that shrank to 0.027 at n=495 — both
+    # estimates regressing toward the mean, as small-sample estimates do. The rival claim now
+    # has to survive a PAIRED bootstrap over the same rows.
+    pv = w.get("vs_persona")
+    if pv:
+        lo, hi = pv["ci95"]
+        if lo > 0:
+            out.append(f"PERSONA BEATS CONSEQUENCE on the same split: {pv['rival']} leads by "
+                       f"{pv['delta']:+.3f} [{lo:+.3f}, {hi:+.3f}], paired over the same "
+                       "prompts. Zhong's explanation predicts this.")
+        elif hi < 0:
+            out.append(f"v_C beats persona on the same split by {-pv['delta']:.3f} "
+                       f"[{-hi:+.3f}, {-lo:+.3f}] paired.")
+        else:
+            out.append(f"v_C and {pv['rival']} are TIED as predictors of attack success: "
+                       f"difference {pv['delta']:+.3f}, 95% CI [{lo:+.3f}, {hi:+.3f}] spans "
+                       f"zero, and the two directions are {pv['cos']:+.2f} correlated. Readout "
+                       "cannot separate consequence from persona here — only the steering "
+                       "control can.")
     if abs(od.get("norm_only", 0.5) - 0.5) > 0.15:
         out.append(f"WARNING: the raw norm alone predicts success at {od['norm_only']:.3f}, so "
                    "even this matched split has a gross confound. Check prompt length.")

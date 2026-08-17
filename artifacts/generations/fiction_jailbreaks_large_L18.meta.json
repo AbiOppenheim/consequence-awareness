@@ -1,0 +1,13 @@
+{
+  "eval": "fiction_jailbreaks_large",
+  "eval_sha256": "d7fc75a826a73ab4",
+  "model_id": "Qwen/Qwen2.5-7B-Instruct",
+  "direction_layer": 18,
+  "steer_layers": [],
+  "alphas": [],
+  "seed": 0,
+  "n_prompts": 500,
+  "conditions": [
+    "baseline"
+  ]
+}

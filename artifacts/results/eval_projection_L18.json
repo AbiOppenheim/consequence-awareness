@@ -60,61 +60,83 @@
         "p10": -0.34254016928172887,
         "p90": 0.32859586650529776,
         "frac_beyond_hypo": 0.0
+      },
+      "fiction_jailbreaks_large": {
+        "n": 500,
+        "mean": 1.2768121930797052,
+        "sd": 0.2675518814923484,
+        "median": 1.2707583698023455,
+        "p10": 0.95242905213128,
+        "p90": 1.6227256179005067,
+        "frac_beyond_hypo": 0.856
       }
     },
     "within_attack": {
-      "n": 98,
-      "n_bypass": 26,
-      "n_refusal": 72,
-      "auc_vc": 0.6720085470085471,
-      "boot": {
-        "auc": 0.6720085470085471,
+      "n": 495,
+      "n_bypass": 112,
+      "n_refusal": 383,
+      "auc_vc": 0.6404326743752331,
+      "auc_vc_norm_residualised": 0.6321102200671391,
+      "corr_score_norm": -0.10741009581368136,
+      "vs_persona": {
+        "rival": "v_mp_persona_ut",
+        "auc_rival": 0.6672417008578889,
+        "delta": 0.026809026482655818,
         "ci95": [
-          0.5630208333333333,
-          0.7767094017094017
+          -0.03979461961225501,
+          0.09587214074993777
+        ],
+        "p_rival_better": 0.782,
+        "cos": 0.2938545776227487
+      },
+      "boot": {
+        "auc": 0.6404326743752331,
+        "ci95": [
+          0.5855207944796718,
+          0.6923034781797837
         ]
       },
       "random_band": {
         "n_draws": 200,
-        "mean_abs_dev": 0.10377136752136751,
-        "p95_abs_dev": 0.2471955128205127,
+        "mean_abs_dev": 0.06347410014919806,
+        "p95_abs_dev": 0.1514978086534874,
         "auc_5_95": [
-          0.2967948717948718,
-          0.7165865384615384
+          0.3748158336441626,
+          0.6290668127564342
         ],
-        "p_value": 0.175
+        "p_value": 0.07
       },
       "other_directions": {
-        "v_c": 0.6720085470085471,
-        "r_hat": 0.516025641025641,
-        "v_mp_persona": 0.7446581196581197,
-        "v_mp_persona_ut": 0.7564102564102565,
-        "norm_only": 0.5085470085470085
+        "v_c": 0.6404326743752331,
+        "r_hat": 0.5249673629242819,
+        "v_mp_persona": 0.645677918687057,
+        "v_mp_persona_ut": 0.6672417008578889,
+        "norm_only": 0.396843528534129
       }
     },
     "cross_set_diagnostic": {
-      "auc": 0.97078125,
+      "auc": 0.971234375,
       "ci95": [
-        0.945072265625,
-        0.99101953125
+        0.946295703125,
+        0.9915328124999999
       ],
-      "d_mean": 1.080875582844858,
+      "d_mean": 1.0823416548406803,
       "random_band": {
         "n_draws": 200,
-        "mean_abs_dev": 0.28658984375,
-        "p95_abs_dev": 0.49048046875,
+        "mean_abs_dev": 0.28629453125000004,
+        "p95_abs_dev": 0.48279218749999997,
         "auc_5_95": [
-          0.0465234375,
-          0.986078125
+          0.030869531250000005,
+          0.9615999999999999
         ],
-        "p_value": 0.115
+        "p_value": 0.08
       },
       "other_directions": {
-        "v_c": 0.97078125,
-        "r_hat": 0.99734375,
-        "v_mp_persona": 0.89140625,
-        "v_mp_persona_ut": 0.926640625,
-        "norm_only": 0.10101562500000001
+        "v_c": 0.971234375,
+        "r_hat": 0.996765625,
+        "v_mp_persona": 0.901828125,
+        "v_mp_persona_ut": 0.9241406249999999,
+        "norm_only": 0.13003125
       }
     },
     "sets_missing": []
@@ -125,6 +147,7 @@
       "inputs": {
         "artifacts/activations/consequence_Qwen2.5-7B-Instruct.npz": "0490e3adb1ab69dc",
         "artifacts/activations/fiction_jailbreaks_Qwen2.5-7B-Instruct.npz": "108965b75540c01b",
+        "artifacts/activations/fiction_jailbreaks_large_Qwen2.5-7B-Instruct.npz": "6ea09846915dff0f",
         "artifacts/activations/refusal_Qwen2.5-7B-Instruct.npz": "2cc9e3c703a8dcbf",
         "artifacts/activations/xstest_Qwen2.5-7B-Instruct.npz": "1f17458885a6ca4e",
         "artifacts/directions/random_L18.pt": "a30d61404f151a3e",
@@ -136,17 +159,17 @@
         "seed": 0
       },
       "code": {
-        "12_project_evals.py": "2d4cff2b0529615e",
+        "12_project_evals.py": "32bc8b8caae7d290",
         "consequence/__init__.py": "e72d3c20839e0beb",
         "consequence/acts.py": "2a28aba05ff98896",
         "consequence/config.py": "5913a357ba3034d0",
         "consequence/io.py": "4c33448e5e658bbd",
         "consequence/results.py": "6a3be71b9b999ca2"
       },
-      "sha": "20ebe6e987f794b7"
+      "sha": "8e94abc1a85ecac0"
     },
-    "git_sha": "372dc58",
-    "command": "scripts/12_project_evals.py --force --scores artifacts/scores/fiction_jailbreaks_L18_scored.jsonl",
-    "written": "2026-08-17 15:25:43"
+    "git_sha": "0e42e6f",
+    "command": "scripts/12_project_evals.py --force --attacks fiction_jailbreaks_large --scores artifacts/scores/fiction_jailbreaks_large_L18_scored.jsonl",
+    "written": "2026-08-17 16:23:01"
   }
 }

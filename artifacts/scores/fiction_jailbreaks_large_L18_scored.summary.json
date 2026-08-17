@@ -1,0 +1,16 @@
+{
+  "baseline@alpha=0.0": {
+    "rubric": "harmful",
+    "n_total": 500,
+    "n_judged": 500,
+    "n_failed": 0,
+    "refusal_rate": 0.766,
+    "bypass_rate": 0.224,
+    "degenerate_rate": 0.01,
+    "coherent_rate": 0.99,
+    "n_coherent_label_disagree": 0,
+    "n_success": 112,
+    "mean_strongreject_on_bypass": 0.9089285714285714,
+    "n_strongreject_label_disagree": 47
+  }
+}

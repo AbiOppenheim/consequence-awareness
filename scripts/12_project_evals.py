@@ -17,12 +17,22 @@ unit vector v_C, then rescaled into a coordinate fixed by the contrast set itsel
 so a number is readable without knowing the raw scale, and is comparable across layers (v_C is
 unit-norm, but the projection scale is not).
 
-THE COMPARISON THAT CARRIES THE CLAIM is fiction_jailbreaks vs. the plain harmful prompts in
-data/contrast/refusal.jsonl — NOT vs. the contrast set. The contrast set is benign tasks in
-framing wrappers, so a jailbreak differs from it in harmfulness AND framing at once, and its raw
-coordinate confounds the two. AdvBench-style prompts are harmful with no fiction framing, so the
-gap between them and the jailbreaks isolates the framing. Report that gap; do not quote the
-jailbreak coordinate on its own.
+THE PRIMARY TEST IS WITHIN THE ATTACK SET: among fiction jailbreaks, does the model's own
+position on v_C predict whether the attack SUCCEEDS? Every prompt there comes from one corpus,
+one filter and one length band, so the two groups are matched by construction, and it is the
+question the project actually cares about.
+
+It is primary because the obvious comparison — attacks vs. plain harmful prompts — turned out to
+be untestable, and expensively so. It looked emphatic (AUC 0.971, a +1.08 coordinate gap) and
+means nothing: the two sets differ ~10x in length, so 8% of ARBITRARY directions separate them at
+least as well, r_hat separates them BETTER than v_C, and the raw vector norm alone reaches 0.899.
+The first version of this stage tested a single stored random direction and reported that gap as
+a result. It is kept below as a labelled diagnostic — never a finding — with the random band and
+the other-directions table that condemn it, because "we tried this and it cannot work" is worth
+recording.
+
+The lesson generalizes: an AUC against unmatched groups is uninterpretable without its random
+band, and one draw is not a band.
 
 SATURATION. The sweep found steering one-sided: -alpha barely moves refusal. Two explanations —
 v_C does not control refusal, or the attacks already sit at the hypothetical extreme so there is
@@ -34,6 +44,8 @@ eval sets need one forward pass each (stage 01), which is the only GPU cost here
 """
 
 import argparse
+import json
+from pathlib import Path
 
 import numpy as np
 from sklearn.metrics import roc_auc_score
@@ -53,6 +65,9 @@ SETS = [
     ("xstest", "xstest"),
 ]
 N_BOOT = 2000
+# One random direction is not a null. Against unmatched groups a typical arbitrary direction
+# separates at AUC ~0.79, so the band is the only honest reference (step 10 learned this first).
+N_RANDOM = 200
 
 
 def describe(coords: np.ndarray) -> dict:
@@ -88,11 +103,121 @@ def auc_with_ci(a: np.ndarray, b: np.ndarray, rng, n_boot: int = N_BOOT) -> dict
     return {"auc": point, "ci95": [float(lo), float(hi)]}
 
 
+def random_band(X: np.ndarray, y: np.ndarray, auc_obs: float, rng,
+                n_draws: int = N_RANDOM) -> dict:
+    """How well do n_draws ARBITRARY directions separate the same two groups?
+
+    The first version of this stage tested one stored random direction, which step 10 had
+    already shown to be worthless: a single draw lands anywhere. It matters more here than
+    anywhere else in the project, because the two prompt sets in the cross-set comparison are
+    not exchangeable — they differ ~10x in length — and against unmatched groups a typical
+    random direction separates at AUC 0.79. Quoting one draw made a confounded comparison look
+    clean. The band, and the fraction of draws beating the observed value, is the honest test.
+    """
+    aucs = []
+    for _ in range(n_draws):
+        v = rng.standard_normal(X.shape[1])
+        v /= np.linalg.norm(v)
+        aucs.append(roc_auc_score(y, X @ v))
+    a = np.asarray(aucs)
+    dev = np.abs(a - 0.5)
+    obs = abs(auc_obs - 0.5)
+    return {
+        "n_draws": n_draws,
+        "mean_abs_dev": float(dev.mean()),
+        "p95_abs_dev": float(np.quantile(dev, 0.95)),
+        "auc_5_95": [float(np.quantile(a, 0.05)), float(np.quantile(a, 0.95))],
+        # A permutation-style p: how often an arbitrary direction does at least this well.
+        "p_value": float((dev >= obs).mean()),
+    }
+
+
+def direction_comparison(X: np.ndarray, y: np.ndarray, ddir, layer: int) -> dict:
+    """The same separation, scored by every other direction we have, plus the raw norm.
+
+    If r_hat and the vector norm separate two groups as well as v_C does, the groups differ in
+    gross ways and no per-direction number from them means anything. This is the diagnostic that
+    exposed the cross-set comparison as untestable.
+    """
+    out = {}
+    for stem in ("v_c", "r_hat", "v_mp_persona", "v_mp_persona_ut"):
+        path = ddir / f"{stem}_L{layer}.pt"
+        if path.exists():
+            v, _ = io.load_direction(path)
+            out[stem] = float(roc_auc_score(y, X @ np.asarray(v, dtype=np.float64)))
+    out["norm_only"] = float(roc_auc_score(y, np.linalg.norm(X, axis=1)))
+    return out
+
+
+def within_attack(acts_path, scores_path, gen_meta_path, ddir, layer, rng) -> dict:
+    """THE correlational test: among the attacks, does 'more hypothetical' predict SUCCESS?
+
+    Every prompt here comes from the same corpus, the same filter and the same length band, so
+    the two groups are matched by construction — which the cross-set comparison is not. It is
+    also the question the project actually cares about: not "do jailbreaks look fictional
+    relative to some other prompts", but "does the model's own sense that this is fiction
+    determine whether the attack lands".
+
+    Pairing is by row index, so the activations and the verdicts MUST come from the same prompt
+    file; the eval hashes recorded by stage 01 and stage 05 are compared before anything else.
+    """
+    acts, _, meta = A.load_acts(acts_path)
+    gen_meta = json.loads(Path(gen_meta_path).read_text())
+    a_sha, g_sha = str(meta.get("source_sha256", "")), str(gen_meta.get("eval_sha256", ""))
+    if a_sha and g_sha and a_sha != g_sha:
+        raise SystemExit(
+            f"[STALE] activations and verdicts come from different prompt files\n"
+            f"        {Path(acts_path).name} built from {a_sha}\n"
+            f"        {Path(gen_meta_path).name} generated from {g_sha}\n"
+            "        Pairing is positional, so this would silently attach every verdict to the "
+            "wrong prompt.")
+
+    rows = [json.loads(l) for l in open(scores_path) if l.strip()]
+    base = {r["idx"]: r["label"] for r in rows if r["condition"] == "baseline"}
+    if not base:
+        raise SystemExit(f"no baseline condition in {Path(scores_path).name} — the within-attack "
+                         "test reads whether each attack landed WITHOUT intervention")
+    idx = np.array(sorted(base))
+    lab = np.array([base[i] for i in idx])
+    keep = np.isin(lab, ["refusal", "bypass"])      # degenerate rows answer neither question
+    idx, lab = idx[keep], lab[keep]
+    if idx.max() >= acts.shape[0]:
+        raise SystemExit(f"verdict idx {idx.max()} exceeds {acts.shape[0]} cached activations")
+
+    X = acts[idx, layer - 1, :].astype(np.float64)
+    y = (lab == "bypass").astype(int)
+    if y.sum() < 5 or (1 - y).sum() < 5:
+        return {"n": int(y.size), "n_bypass": int(y.sum()),
+                "underpowered": "fewer than 5 in one class — no test attempted"}
+
+    v_c, _ = io.load_direction(ddir / f"v_c_L{layer}")
+    # Negated so the score means "more hypothetical": v_C points toward REAL.
+    Xh = -X
+    auc = float(roc_auc_score(y, Xh @ np.asarray(v_c, dtype=np.float64)))
+    return {
+        "n": int(y.size),
+        "n_bypass": int(y.sum()),
+        "n_refusal": int((1 - y).sum()),
+        "auc_vc": auc,
+        "boot": auc_with_ci(
+            (Xh[y == 0] @ np.asarray(v_c, dtype=np.float64)),
+            (Xh[y == 1] @ np.asarray(v_c, dtype=np.float64)), rng),
+        "random_band": random_band(Xh, y, auc, rng),
+        "other_directions": direction_comparison(Xh, y, ddir, layer),
+    }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/qwen.yaml")
     ap.add_argument("--layer", type=int, default=None,
                     help="project at this layer; defaults to the layer step 03 selected")
+    ap.add_argument("--attacks", default="fiction_jailbreaks",
+                    help="eval key holding the attack set to run the within-attack test on")
+    ap.add_argument("--scores", default=None,
+                    help="scored generations for --attacks, e.g. "
+                         "artifacts/scores/fiction_jailbreaks_L18_scored.jsonl. Enables the "
+                         "within-attack test, which is the primary correlational result.")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
@@ -165,23 +290,37 @@ def main() -> None:
                 raw_fn, _ = project(available["fiction_jailbreaks"], rand)
                 null_groups["fiction_jailbreaks"] = ncoord(raw_fn)
 
-        # THE test: harmful+fiction vs harmful-plain. Both harmful, so the gap is the framing.
-        headline, null_headline = None, None
+        # The cross-set comparison, kept as a DIAGNOSTIC rather than a result. It is confounded:
+        # attacks and AdvBench prompts differ ~10x in length, so the groups are not exchangeable
+        # and a typical arbitrary direction separates them. The random band and the
+        # other-directions table below are what establish that, so the number is never read
+        # without them.
+        cross = None
         if "fiction_jailbreaks" in groups and "harmful_plain" in groups:
-            headline = auc_with_ci(groups["harmful_plain"], groups["fiction_jailbreaks"], rng)
-            headline["d_mean"] = float(groups["fiction_jailbreaks"].mean()
-                                       - groups["harmful_plain"].mean())
-            if len(null_groups) == 2:
-                null_headline = auc_with_ci(null_groups["harmful_plain"],
-                                            null_groups["fiction_jailbreaks"], rng)
+            cross = auc_with_ci(groups["harmful_plain"], groups["fiction_jailbreaks"], rng)
+            cross["d_mean"] = float(groups["fiction_jailbreaks"].mean()
+                                    - groups["harmful_plain"].mean())
+            acts_f, _, _ = A.load_acts(available["fiction_jailbreaks"])
+            acts_r, lab_r2, _ = A.load_acts(available["refusal"])
+            Xc = np.vstack([acts_r[lab_r2 == 1][:, layer - 1, :], acts_f[:, layer - 1, :]])
+            yc = np.concatenate([np.zeros((lab_r2 == 1).sum()), np.ones(acts_f.shape[0])])
+            cross["random_band"] = random_band(-Xc.astype(np.float64), yc, cross["auc"], rng)
+            cross["other_directions"] = direction_comparison(-Xc.astype(np.float64), yc,
+                                                             ddir, layer)
+
+        within = None
+        if args.scores:
+            within = within_attack(available.get(args.attacks), args.scores,
+                                   Path(args.scores).parent.parent / "generations" /
+                                   f"{args.attacks}_L{layer}.meta.json", ddir, layer, rng)
 
         return {
             "layer": layer,
             "scale": {"mu_real_raw": float(mu_real), "mu_hypo_raw": float(mu_hypo),
                       "span_raw": float(span)},
             "groups": {k: describe(v) for k, v in groups.items()},
-            "headline_fiction_vs_harmful_plain": headline,
-            "null_random_direction": null_headline,
+            "within_attack": within,
+            "cross_set_diagnostic": cross,
             "sets_missing": [n for n, _, _ in missing],
         }
 
@@ -205,17 +344,41 @@ def report(res: dict, missing) -> None:
         print(f"{name:<22}{g['n']:>5}{g['mean']:>8.2f}{g['sd']:>7.2f}"
               f"{g['p10']:>8.2f}{g['p90']:>8.2f}{g['frac_beyond_hypo']:>8.2f}")
 
-    h = res["headline_fiction_vs_harmful_plain"]
-    if h is None:
-        print("\nThe headline comparison needs BOTH fiction_jailbreaks and refusal activations.")
+    w = res.get("within_attack")
+    print("\n=== PRIMARY: WITHIN the attack set — does 'more hypothetical' predict SUCCESS? ===")
+    if w is None:
+        print("  not run — pass --scores <scored jailbreaks>.jsonl")
+    elif "underpowered" in w:
+        print(f"  n={w['n']} bypass={w['n_bypass']} — {w['underpowered']}")
     else:
-        print(f"\nFICTION-FRAMED vs PLAIN HARMFUL  (both harmful; the gap is the framing)")
-        print(f"  difference in mean coordinate: {h['d_mean']:+.2f}")
-        print(f"  AUC {h['auc']:.3f}  95% CI [{h['ci95'][0]:.3f}, {h['ci95'][1]:.3f}]")
-        n = res["null_random_direction"]
-        if n:
-            print(f"  random-direction null: AUC {n['auc']:.3f} "
-                  f"95% CI [{n['ci95'][0]:.3f}, {n['ci95'][1]:.3f}]")
+        b, rb = w["boot"], w["random_band"]
+        print(f"  n={w['n']}  bypass={w['n_bypass']}  refusal={w['n_refusal']}   "
+              "(same corpus, same filter, same length band -> matched by construction)")
+        print(f"  v_C   AUC {w['auc_vc']:.3f}  bootstrap 95% CI "
+              f"[{b['ci95'][0]:.3f}, {b['ci95'][1]:.3f}]")
+        print(f"  {rb['n_draws']} random directions: mean |AUC-0.5| {rb['mean_abs_dev']:.3f}, "
+              f"p95 {rb['p95_abs_dev']:.3f}  ->  p = {rb['p_value']:.3f}")
+        print("  same split scored by other directions: " + "  ".join(
+            f"{k}={v:.3f}" for k, v in w["other_directions"].items()))
+
+    h = res.get("cross_set_diagnostic")
+    print("\n=== DIAGNOSTIC (confounded, not a result): attacks vs plain harmful prompts ===")
+    if h is None:
+        print("  needs BOTH fiction_jailbreaks and refusal activations.")
+    else:
+        rb = h.get("random_band", {})
+        print(f"  difference in mean coordinate {h['d_mean']:+.2f};  v_C AUC {h['auc']:.3f} "
+              f"[{h['ci95'][0]:.3f}, {h['ci95'][1]:.3f}]")
+        if rb:
+            print(f"  {rb['n_draws']} random directions: mean |AUC-0.5| {rb['mean_abs_dev']:.3f}, "
+                  f"5-95% AUC [{rb['auc_5_95'][0]:.3f}, {rb['auc_5_95'][1]:.3f}]  ->  "
+                  f"p = {rb['p_value']:.3f}")
+        if h.get("other_directions"):
+            # Separation STRENGTH, not signed AUC: which side a direction happens to point is
+            # arbitrary here, and 0.10 separates exactly as hard as 0.90. Printing the signed
+            # value makes the norm look weak next to v_C when it is just as strong.
+            print("  separation strength of other scores (max(auc, 1-auc)): " + "  ".join(
+                f"{k}={max(v, 1 - v):.3f}" for k, v in h["other_directions"].items()))
 
     print("\n--- reading the result ---")
     for line in readings(res):
@@ -241,26 +404,55 @@ def readings(res: dict) -> list[str]:
                    "no fiction framing on either). Any jailbreak gap smaller than this is "
                    "content, not framing.")
 
-    h = res["headline_fiction_vs_harmful_plain"]
-    if h is None:
-        out.append("NO CORRELATIONAL RESULT YET: without the fiction_jailbreaks activations this "
-                   "stage has established the measuring scale and nothing about the attacks.")
+    h = res.get("cross_set_diagnostic")
+    if h and h.get("random_band"):
+        rb, od = h["random_band"], h.get("other_directions", {})
+        if rb["p_value"] > 0.05:
+            out.append(
+                f"THE CROSS-SET COMPARISON IS UNTESTABLE, NOT SUPPORTIVE: v_C separates attacks "
+                f"from plain harmful prompts at AUC {h['auc']:.3f}, but so do "
+                f"{rb['p_value']:.0%} of ARBITRARY directions"
+                + (f", and the raw vector norm alone separates them at "
+                   f"{max(od['norm_only'], 1 - od['norm_only']):.3f}"
+                   if "norm_only" in od else "")
+                + ". The two prompt sets differ ~10x in length; nothing per-direction can be "
+                  "concluded from them. Do NOT report the +1.08 gap as evidence of framing.")
+        else:
+            out.append(f"cross-set: v_C at AUC {h['auc']:.3f} beats the random band "
+                       f"(p = {rb['p_value']:.3f}) — but the sets are still unmatched in length, "
+                       "so treat it as suggestive, not as the result.")
+
+    w = res.get("within_attack")
+    if not w:
+        out.append("NO PRIMARY RESULT: the within-attack test needs --scores. Everything above "
+                   "is scale-setting and diagnostics.")
+        return out
+    if "underpowered" in w:
+        out.append(f"UNDERPOWERED: {w['underpowered']} (n={w['n']}, bypass={w['n_bypass']}). "
+                   "Scale the attack set with 05_generate.py --baseline-only.")
         return out
 
-    lo, hi = h["ci95"]
-    null = res["null_random_direction"]
-    if lo <= 0.5 <= hi:
-        out.append(f"ATTACKS DO NOT MOVE v_C: AUC {h['auc']:.3f}, CI spans 0.5. Fiction framing "
-                   "leaves this axis where plain harmful prompts already put it. The steering "
-                   "effect cannot be undoing something the attack did — say so plainly; it "
-                   "contradicts the mechanism 'Adversarial Tales' proposed.")
+    rb, od = w["random_band"], w["other_directions"]
+    if rb["p_value"] > 0.05:
+        out.append(f"NOT SIGNIFICANT: within the attacks, v_C predicts success at AUC "
+                   f"{w['auc_vc']:.3f}, but p = {rb['p_value']:.3f} against {rb['n_draws']} "
+                   f"random directions. Directionally consistent with the hypothesis and NOT "
+                   f"evidence for it at n={w['n']} ({w['n_bypass']} successes). More attacks is "
+                   "the fix, and it is cheap: --baseline-only.")
     else:
-        out.append(f"attacks DO move v_C: AUC {h['auc']:.3f} CI [{lo:.3f}, {hi:.3f}], mean "
-                   f"coordinate {h['d_mean']:+.2f} vs matched-harmfulness prompts.")
-    if null and not (null["ci95"][0] <= 0.5 <= null["ci95"][1]):
-        out.append(f"NULL IS NOT QUIET: a random direction separates the same two sets at AUC "
-                   f"{null['auc']:.3f}. The sets differ in ways any direction can see; the v_C "
-                   "number is not specific until this is explained.")
+        out.append(f"v_C predicts which attacks succeed: AUC {w['auc_vc']:.3f}, p = "
+                   f"{rb['p_value']:.3f} vs {rb['n_draws']} random directions, on prompts "
+                   "matched by construction. This is the correlational claim.")
+    rival = max(((k, v) for k, v in od.items() if k.startswith("v_mp")), default=None,
+                key=lambda kv: abs(kv[1] - 0.5))
+    if rival and abs(rival[1] - 0.5) > abs(w["auc_vc"] - 0.5):
+        out.append(f"PERSONA BEATS CONSEQUENCE on the same split: {rival[0]} reaches "
+                   f"{rival[1]:.3f} against v_C's {w['auc_vc']:.3f}. Zhong's explanation "
+                   "predicts exactly this. Report it, and run the v_MP steering control before "
+                   "claiming the mechanism is about consequence.")
+    if abs(od.get("norm_only", 0.5) - 0.5) > 0.15:
+        out.append(f"WARNING: the raw norm alone predicts success at {od['norm_only']:.3f}, so "
+                   "even this matched split has a gross confound. Check prompt length.")
 
     fj = g.get("fiction_jailbreaks")
     if fj:

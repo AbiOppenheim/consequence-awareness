@@ -29,7 +29,10 @@ Row shape (data/eval/README.md):
 import argparse
 import json
 import re
+import zlib
 from pathlib import Path
+
+import numpy as np
 
 import _bootstrap  # noqa: F401
 from consequence.config import REPO_ROOT
@@ -42,6 +45,43 @@ EVAL = REPO_ROOT / "data" / "eval"
 FICTION_MARKERS = re.compile(
     r"\b(role[- ]?play|roleplay|pretend|imagine|fiction|fictional|story|novel|screenplay|"
     r"character|act as|you are now|simulation|simulate|movie|script|scene)\b", re.I)
+
+
+# ---- near-duplicate rejection -------------------------------------------------------------
+# In-the-wild jailbreaks are heavily reposted: the same DAN-style prompt appears dozens of times
+# with a renamed persona or an extra sentence. Comparing the first 200 characters (the old rule)
+# catches verbatim reposts and nothing else. That is survivable at n=100 and not at n=400, where
+# clones inflate the effective sample: a correlation measured over 400 rows that are really 150
+# distinct prompts has error bars for 150 and the confidence of 400.
+#
+# MinHash over word 5-shingles estimates Jaccard overlap in 64 integer comparisons, so screening
+# every candidate against everything kept stays linear enough to run over the whole corpus.
+N_HASH = 64
+JACCARD_MAX = 0.5          # above this, treat as the same attack wearing a different name
+_RNG = np.random.default_rng(0)
+_A = _RNG.integers(1, 2**63, N_HASH, dtype=np.uint64)
+_B = _RNG.integers(0, 2**63, N_HASH, dtype=np.uint64)
+
+
+def _signature(text: str, k: int = 5) -> np.ndarray:
+    """MinHash signature of the prompt's word 5-shingles.
+
+    crc32, not hash(): Python's string hash is salted per process, so hash() would make the
+    built dataset depend on the interpreter session rather than on the corpus.
+    """
+    words = re.findall(r"\w+", text.lower())
+    grams = ([" ".join(words[i:i + k]) for i in range(len(words) - k + 1)]
+             or [" ".join(words)])
+    xs = np.array([zlib.crc32(g.encode()) for g in grams], dtype=np.uint64)
+    # 64 independent hashes of every shingle; the per-hash minimum is the signature.
+    return (_A[:, None] * xs[None, :] + _B[:, None]).min(axis=1)
+
+
+def _is_near_duplicate(sig: np.ndarray, kept: list) -> bool:
+    if not kept:
+        return False
+    sims = (np.vstack(kept) == sig).mean(axis=1)     # matching minima ~= Jaccard
+    return bool(sims.max() > JACCARD_MAX)
 
 
 def _load_hf(repo_id: str, *args, **kw):
@@ -95,24 +135,33 @@ def build_xstest() -> None:
     print("  (safe prompts only — the unsafe contrast half is deliberately excluded)")
 
 
-def build_jailbreaks(source: str, limit: int) -> None:
+def build_jailbreaks(source: str, limit: int, out: str = "fiction_jailbreaks") -> None:
     if source != "in_the_wild":
         raise SystemExit(f"unknown source {source!r}")
     ds = _load_hf("TrustAIRLab/in-the-wild-jailbreak-prompts", "jailbreak_2023_12_25",
                   split="train")
     col = "prompt" if "prompt" in ds.column_names else ds.column_names[0]
 
-    seen, rows = set(), []
+    seen, sigs, rows = set(), [], []
+    n_len = n_family = n_exact = n_near = 0
     for i, r in enumerate(ds):
         text = (r[col] or "").strip()
         if not (200 < len(text) < 4000):          # skip fragments and walls of text
+            n_len += 1
             continue
         if not FICTION_MARKERS.search(text):      # fiction / role-play family only
+            n_family += 1
             continue
         key = text[:200].lower()
         if key in seen:
+            n_exact += 1
+            continue
+        sig = _signature(text)
+        if _is_near_duplicate(sig, sigs):
+            n_near += 1
             continue
         seen.add(key)
+        sigs.append(sig)
         rows.append({"id": f"itw_fiction_{i}", "text": text,
                      "source": "in_the_wild_jailbreak_prompts",
                      "attack_family": "fiction_roleplay"})
@@ -120,7 +169,15 @@ def build_jailbreaks(source: str, limit: int) -> None:
             break
     if not rows:
         raise SystemExit("no fiction-family prompts matched — inspect the dataset schema")
-    write(rows, EVAL / "fiction_jailbreaks.jsonl")
+    # Printed because it is the number that decides whether a bigger n is even available: if
+    # near-duplicate rejection is what stopped the build, raising --limit will not help.
+    print(f"  filtered {len(ds)} rows -> {len(rows)} kept  "
+          f"(dropped: {n_len} length, {n_family} not fiction-family, "
+          f"{n_exact} exact dup, {n_near} near-dup at Jaccard>{JACCARD_MAX})")
+    if len(rows) < limit:
+        print(f"  NOTE: the corpus is exhausted at {len(rows)} distinct fiction-family attacks; "
+              f"--limit {limit} cannot be met from this snapshot.")
+    write(rows, EVAL / f"{out}.jsonl")
     print("  NOTE: published attacks, used verbatim. File is gitignored (CLAUDE.md 7).")
 
 
@@ -131,6 +188,11 @@ def main() -> None:
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--source", default="in_the_wild")
     ap.add_argument("--limit", type=int, default=100, help="~100 attacks is the sweep budget")
+    ap.add_argument("--out", default="fiction_jailbreaks",
+                    help="basename under data/eval/. Build a LARGER set under a NEW name rather "
+                         "than rebuilding fiction_jailbreaks: stages 01 and 05 hash the eval "
+                         "file, so overwriting it marks every cached activation and every "
+                         "generated sweep [STALE] and they have to be redone.")
     ap.add_argument("--force", action="store_true", help="rebuild even if the file exists")
     args = ap.parse_args()
 
@@ -141,8 +203,8 @@ def main() -> None:
     # previously took the jailbreak build down with it, leaving neither file on disk.
     failed = []
     for want, name, fn in ((args.xstest or args.all, "xstest", build_xstest),
-                           (args.jailbreaks or args.all, "fiction_jailbreaks",
-                            lambda: build_jailbreaks(args.source, args.limit))):
+                           (args.jailbreaks or args.all, args.out,
+                            lambda: build_jailbreaks(args.source, args.limit, args.out))):
         if not want:
             continue
         # Resumable (Rule 4). These files are gitignored, so every recycled runtime has to

@@ -134,6 +134,12 @@ def main() -> None:
     ap.add_argument("--window", type=int, default=1,
                     help="steer at layers [layer-w+1 .. layer]; 1 = only the extraction layer")
     ap.add_argument("--force", action="store_true", help="regenerate conditions already present")
+    ap.add_argument("--baseline-only", action="store_true",
+                    help="generate ONLY the unsteered baseline — no steering, no directions, no "
+                         "alpha ladder. This is what the stage-12 correlational test needs: for "
+                         "each prompt, did the attack land without intervention. It costs 1/21 "
+                         "of a sweep, so the attack set can be scaled up for that test without "
+                         "paying for a steering sweep at the larger n.")
     ap.add_argument("--extra-direction", action="append", default=[], metavar="STEM",
                     help="also sweep this direction, e.g. --extra-direction v_c_orth_r_hat. "
                          "Loads artifacts/directions/STEM_L{layer}.pt and adds a condition "
@@ -151,8 +157,10 @@ def main() -> None:
     cfg = load_config(args.config)
     rdir = resolve(cfg["paths"]["results"])
     layer = resolve_layer(args.layer, rdir)
-    alphas = resolve_alphas(args.alphas, cfg, rdir, layer)
-    if not alphas:
+    # The baseline needs no ladder, and requiring one would block running it at a layer that has
+    # never been calibrated — which is exactly the case this flag exists for.
+    alphas = [] if args.baseline_only else resolve_alphas(args.alphas, cfg, rdir, layer)
+    if not alphas and not args.baseline_only:
         raise SystemExit("no non-zero alphas — run scripts/11_calibrate_alpha.py, pass --alphas, "
                          "or set steer.alphas in the config")
 
@@ -202,6 +210,25 @@ def main() -> None:
                 "        the original eval file, or re-run with --force to regenerate all\n"
                 "        conditions against the current one. Resuming would mix the two."
             )
+
+    if args.baseline_only:
+        # No directions are loaded at all: the point of this path is to run at a larger n than
+        # the sweep, possibly before any direction exists for the layer.
+        print(f"[sweep] BASELINE ONLY — {len(prompts)} prompts, no steering")
+        model, tok = A.load_model(cfg["model"]["id"], cfg["model"]["dtype"])
+        try:
+            run_all(model, tok, prompts, out, already, [], layers, gen_kwargs,
+                    None, None, None)
+        except torch.cuda.OutOfMemoryError:
+            raise SystemExit("CUDA OOM on the baseline pass — lower --batch-size")
+        meta_path.write_text(json.dumps({
+            "eval": args.eval, "eval_sha256": eval_sha,
+            "model_id": cfg["model"]["id"], "direction_layer": layer,
+            "steer_layers": [], "alphas": [], "seed": cfg["seed"],
+            "n_prompts": len(prompts), "conditions": ["baseline"],
+        }, indent=2))
+        print(f"[write] {out}\n[write] {meta_path}")
+        return
 
     v_c, _ = io.load_direction(ddir / f"v_c_L{layer}")
     rand, _ = io.load_direction(ddir / f"random_L{layer}")

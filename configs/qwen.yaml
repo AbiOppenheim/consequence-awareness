@@ -77,4 +77,8 @@ data:
   persona: data/contrast/persona.jsonl        # v_MP, instruction in SYSTEM prompt (Zhong's convention)
   persona_ut: data/contrast/persona_ut.jsonl  # v_MP, instruction in USER turn (matches v_C/r_hat extraction)
   fiction_jailbreaks: data/eval/fiction_jailbreaks.jsonl
+  # A LARGER draw from the same published corpus, for the stage-12 within-attack test only.
+  # Separate key on purpose: stages 01 and 05 hash the eval file, so rebuilding
+  # fiction_jailbreaks in place would mark every cached activation and both sweeps [STALE].
+  fiction_jailbreaks_large: data/eval/fiction_jailbreaks_large.jsonl
   xstest: data/eval/xstest.jsonl

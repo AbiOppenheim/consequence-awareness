@@ -21,17 +21,21 @@ extract:
   # Layers to sweep when picking where v_C lives. Mid-stack for a 28-layer model.
   layer_sweep: [8, 10, 12, 14, 16, 18, 20, 22, 24]
 
-# ---- Stage 05: steering / knockout (GPU) ----
+# ---- Stage 05: steering (GPU) ----
 steer:
-  # Activation-addition window: h <- h + alpha * v_C  (toward "real").
-  layers: [12, 14, 16]
-  # alpha multiplies the UNIT direction. Because residual-stream norms are large, these are
-  # placeholders to be tuned against measured norms in the first sweep, not final values.
+  # The steering window is DERIVED from --layer in 05_generate.py, never read from here: a
+  # direction measured at L must be added back at L. There is deliberately no `layers:` key --
+  # one used to sit here saying [12, 14, 16] while every sweep actually ran at L18, which is
+  # exactly the kind of config a reader believes.
+  #
+  # alpha multiplies the UNIT direction. These are placeholders: 11_calibrate_alpha.py measures
+  # the residual norm at the steering layer and writes the real ladder as fractions of ||h||,
+  # which is what `--alphas auto` reads. Used only via `--alphas config`.
   alphas: [0, 2, 4, 8, 16]
 
-knockout:
-  # Projection knockout window for the distinctness test. Zhong's persona knockout lives late.
-  layers: [20, 21, 22]
+# No `knockout:` section. hooks.knockout_hook exists and is tested, but no stage calls it:
+# planned differential ablation was superseded by bidirectional steering of the rival direction
+# (README, Results). A config key describing an experiment that never runs is a trap.
 
 # ---- Stage 05: generation (GPU) ----
 generate:

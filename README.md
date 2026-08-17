@@ -17,6 +17,7 @@ A 2026 interpretability agenda (*From Adversarial Poetry to Adversarial Tales*) 
 3. **Correlational test** — do published fiction-framed jailbreaks actually move the model along `v_C`?
 4. **Causal test** — steer toward "real" (`h ← h + α·v_C`) during jailbreaks; measure refusal restoration vs. random-direction and refusal-direction baselines, using a three-way refusal/bypass/degenerate metric.
 5. **Distinctness** — cosine similarity + differential ablation of `v_C` vs. the refusal direction `r̂` (Arditi) and the compliant-persona direction `v_MP` (Zhong & Li, 2026).
+   *As run, ablation was replaced by **bidirectional steering of the rival direction**, which answers a stronger question — see [Results](#results).*
 
 **Every outcome is a result:** a distinct causal direction → new defense target; "it's persona relabeled" → useful negative result; "readable but causally inert" → defense work stays on the refusal pathway.
 
@@ -69,9 +70,10 @@ renders their stored results; it computes nothing itself.
 | 09 | `09_heldout.py` | — | held-out reveal → `results/heldout.json` (**run once**) |
 | 10 | `10_redteam_heldout.py` | — | per-route, per-layer, TF-IDF, 100-draw null → `results/heldout_redteam.json` |
 | 11 | `11_calibrate_alpha.py [--layer L]` | — | residual norms → `results/alpha_ladder_L*.json` |
-| 05 | `05_generate.py --eval E` | ✅ | eval prompts under steer/knockout → `generations/*.jsonl` |
+| 05 | `05_generate.py --eval E` | ✅ | eval prompts under each steering condition → `generations/*.jsonl` |
 | 06 | `06_judge.py [--resume]` | — | generations → refusal/bypass/degenerate + StrongREJECT |
-| 08 | `08_sweep_analysis.py` | — | scores → `results/sweep_L*.json` + the four readings |
+| 08 | `08_sweep_analysis.py` | — | scores → `results/sweep_L*.json`, the readings + the selectivity table |
+| 12 | `12_project_evals.py [--attacks E --scores S]` | — | activations + verdicts → `results/eval_projection_L*.json` (the correlational test) |
 | 13 | `13_orthogonalize.py` | — | `v_C` minus its `r̂` component → `directions/v_c_orth_r_hat_L*.pt`, `results/orthogonalize.json` |
 | 07 | `07_figures.py` | — | analysis JSONs → figures |
 
@@ -83,16 +85,87 @@ different dose at L22 than at L18, and layers are only comparable as fractions o
 
 `05_generate.py --extra-direction STEM` adds any minted direction as an extra swept condition,
 appending to the same output file so resumption keeps what already ran. That is how the
-orthogonalized `v_C` is tested causally.
+orthogonalized `v_C` and the persona control are tested causally; `--extra-both-signs` sweeps
+them at −α too, and `--baseline-only` runs the unsteered condition alone (1/21 of a sweep) so an
+attack set can be scaled up for stage 12 without paying for steering at the larger n.
+
+**Two rubrics, not one.** `06_judge.py` picks `harmful` (refusal/bypass/degenerate) or `benign`
+(answered/refused/degenerate) from the eval name, and stage 08 refuses to read an over-refusal
+control that was not judged `benign`. The label vocabularies are deliberately disjoint: under a
+single rubric a *helpful* answer to a safe prompt scores as a 'refusal', which silently produced
+a meaningless 0.99 over-refusal baseline before the split.
 
 **Offline tests** (no GPU, no API, no cost): `test_hooks.py` (steering hits the layer `v_C` was
 measured at, under both HF block conventions), `test_generate.py` (batched generation is
-padding-safe), `test_judge.py` (judge request shape, per-row failures, and that a failed
-judgment is never counted as a refusal). Each was verified to fail against the bug it pins.
+padding-safe), `test_acts.py` (caching never invokes the LM head, batch size does not change the
+activations, an OOM retry reproduces the clean run), `test_judge.py` (request shape, per-row
+failures, the two rubrics, and that a billing failure stops fast while keeping earned verdicts).
+Each was verified to fail against the bug it pins.
 
 `r_hat` is minted per layer by step 02b from the cube that Arditi's repo writes into
 `artifacts/directions/` — see `external/README.md`. `v_MP` is our reimplementation of Zhong's
 `compliant_v2 model_persona`, extracted through the same stage 02 as `v_C`.
+
+## Results
+
+All numbers are `Qwen2.5-7B-Instruct`, steering layer **L18**, fiction/role-play attacks only,
+and live in `artifacts/results/*.json` with the git SHA and input hashes that produced them.
+
+**Claim 1 — a consequence direction exists and is distinct.** Held out **40 framing templates**
+touched by nothing until the final reveal: the unfitted `v_C` projection scores **AUC 0.935**
+there, against a 100-draw random band and a best fitted surface baseline (tf-idf uni+bigram) of
+**0.847**. The unfitted curve *rises* with depth (0.855 → 0.94), which a lexical artifact would
+not do. At L18, cos(`v_C`, `r̂`) = **0.085** and cos(`v_C`, `v_MP`) = **0.24–0.29** against a
+random-direction band of 0.032 — distinct, with modest overlap, not orthogonal. Removing the
+`r̂` component costs **0.000** held-out AUC, so the real-vs-hypothetical information does not
+live in the refusal direction. Extraction itself was validated first: our `r̂` reproduces
+Arditi's at **cos 0.9999** with a discriminating control set (`results/gate.json`).
+
+**Claim 2 — steering is causal, and selective.** At the headline dose (0.5·‖h‖, the strongest
+that keeps output coherent):
+
+| condition | Δrefusal (attacks) | Δrefusal (safe) | selectivity |
+|---|---|---|---|
+| **`+v_C`** | **+0.23** | **+0.03** | **7.2** |
+| `+r̂` | +0.27 | +0.61 | 0.44 |
+| `−v_MP` | +0.14 | +0.47 | 0.30 |
+| random | −0.05 | −0.01 | — |
+
+Selectivity is attack refusal gained per point of over-refusal on 250 safe XSTest prompts, and
+it is the number the defense claim rests on: `r̂` restores refusal by refusing **61% more
+harmless prompts**, which is an off switch rather than a defense. `v_C` is ~16× more selective
+than `r̂` and ~24× more than the best persona arm. The effect survives orthogonalization against
+`r̂` (+0.25).
+
+**The specificity control is the strongest single result.** `v_MP` is 0.29-correlated with
+`v_C`, extracted by the same pipeline, and **statistically tied** with it at predicting which
+attacks succeed (0.640 vs 0.667, paired 95% CI [−0.040, +0.096]). Readout cannot separate them.
+Intervention separates them completely: at +α they move refusal in **opposite directions**
+(`v_C` +0.23, `v_MP` −0.25), and reversed, `v_MP` restores refusal only by becoming a blunt
+refuse-everything switch. This replaces the planned differential ablation — necessity — with a
+sharper question, sufficiency and specificity against a rival that readout says is equivalent.
+
+**What did not work, reported as found.**
+
+- **The correlational test (step 3) is weak.** Within 495 attacks, `v_C` predicts which succeed
+  at AUC **0.640** (bootstrap CI [0.587, 0.692]) but **p = 0.06** against 200 random directions —
+  a real in-sample association, only marginally specific to `v_C`. Not a length artifact
+  (0.632 after residualising on ‖h‖).
+- **The obvious version of that test is untestable.** Attacks vs. plain harmful prompts looks
+  emphatic (AUC 0.971) and means nothing: the sets differ ~10× in length, ~8% of *arbitrary*
+  directions match it, `r̂` separates them better, and the raw vector norm alone reaches 0.899.
+  Kept in `12_project_evals.py` as a labelled diagnostic, never a finding.
+- **The effect is layer-specific.** At L22 — where `v_C` reads out *best* (0.942 vs 0.935) —
+  steering moves refusal **+0.00**. Readout quality and causal efficacy dissociate, so Claim 2
+  is scoped to L18 and both layers are reported.
+- **Steering is one-sided**, which the projection explains: **86%** of attacks already sit past
+  the hypothetical pole, so −α has no headroom.
+
+**Instrument caveats.** A second independent judging pass over identical generations gives mean
+|drift| **0.013** (max 0.080), so the effects are ~18× judge noise — but the random null itself
+moved +0.00 → −0.05 between passes, so effects are quoted against a band, not a point.
+StrongREJECT disagrees with its own label on 8–9% of rows and is reported conditioned on bypass,
+never alone. The judge has not been validated against human labels.
 
 ## Status
 
@@ -100,11 +173,17 @@ judgment is never counted as a refusal). Each was verified to fail against the b
 - [x] Full design doc / tutorial with failure modes priced in (`docs/tutorial.md`)
 - [x] Compute & resource estimation (`docs/compute_estimation.md`)
 - [x] Dataset construction rules + starter framing templates (`data/`)
-- [ ] Week 1 — pipeline validated; Arditi `r̂` reproduced on Qwen
-- [ ] Week 2 — consequence dataset + probes; correlational read
-- [ ] Week 3 — steering experiment vs. baselines; direction geometry
-- [ ] Week 4 — red-teaming (paraphrase controls, XSTest, second model)
+- [x] Week 1 — pipeline validated; Arditi `r̂` reproduced on Qwen (cos 0.9999)
+- [x] Week 2 — consequence dataset + probes; held-out reveal + red-team
+- [x] Week 3 — steering experiment vs. baselines; direction geometry
+- [x] Week 4 — red-teaming: XSTest over-refusal, persona specificity control, second layer,
+      correlational test at n=495
 - [ ] Week 5 — public blog post
+
+**Experiments are complete.** Deliberately not run, and stated as limitations rather than gaps:
+a second model (Llama-3.1-8B), a second attack family, and differential ablation — superseded by
+the bidirectional persona control above. **Outstanding:** a ~50-verdict human agreement check on
+the judge, which every number here depends on and which has caught two errors already.
 
 ## Responsible use
 

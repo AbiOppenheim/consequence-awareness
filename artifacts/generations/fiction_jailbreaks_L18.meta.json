@@ -19,5 +19,6 @@
     "steer_rhat",
     "steer_v_mp_persona_ut",
     "steer_v_mp_persona"
-  ]
+  ],
+  "extra_both_signs": true
 }

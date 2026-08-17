@@ -168,8 +168,8 @@
       },
       "sha": "8e94abc1a85ecac0"
     },
-    "git_sha": "0e42e6f",
+    "git_sha": "ecf3564",
     "command": "scripts/12_project_evals.py --force --attacks fiction_jailbreaks_large --scores artifacts/scores/fiction_jailbreaks_large_L18_scored.jsonl",
-    "written": "2026-08-17 16:23:01"
+    "written": "2026-08-17 18:14:50"
   }
 }

@@ -24,6 +24,33 @@ This is a 5-week course project with a **~30 hour total human budget**, of which
 2. **Causality.** Steering toward "real" along `v_C` restores refusal during fiction-framed
    jailbreaks, beyond what random-direction and persona baselines explain.
 
+### Where the project is (updated 2026-08-17)
+
+**Experiments are COMPLETE. The phase is the write-up.** Do not propose new runs without a
+reason that changes a conclusion; a second model, a second attack family and more layers each
+add a limitation to the post rather than a finding.
+
+Headline, all at L18 on Qwen2.5-7B, fiction/role-play attacks only:
+
+- `v_C` generalizes to 40 held-out framing templates — unfitted AUC **0.935** vs a best fitted
+  surface baseline of 0.847, and the unfitted curve rises with depth.
+- Steering restores refusal **+0.23** where a random direction moves −0.05, and it is
+  **selective**: +0.03 over-refusal on safe prompts, a ratio of **7.2** against `r̂`'s 0.44.
+- The specificity control settles distinctness causally. `v_MP` is 0.29-correlated with `v_C`
+  and **tied** with it on readout, but at +α they steer refusal in *opposite* directions, and
+  reversed `v_MP` only restores refusal by refusing ~half of all harmless prompts (ratio 0.30).
+- Honest negatives that belong in the post: the correlational test is weak (0.640, p = 0.06);
+  its cross-set version is untestable and labelled as such; and at **L22 steering does nothing**
+  (+0.00) even though `v_C` reads out best there — readout and causation dissociate.
+
+**The one outstanding task is the ~50-verdict human agreement check on the judge.** Every number
+above depends on `gpt-4.1-mini`, and that instrument has produced two wrong conclusions this
+project caught (the XSTest rubric; StrongREJECT disagreeing with its own label on 8–9% of rows).
+
+Differential ablation (README step 5b) was **deliberately dropped** — superseded by the
+bidirectional persona control, which answers specificity rather than necessity. `knockout_hook`
+remains implemented and tested but is called by no stage, on purpose.
+
 ### Every outcome is a publishable result
 
 - `v_C` exists, is distinct, steering works → new causal defense target.

@@ -4,6 +4,72 @@ Newest entries at the top. One entry per working session (course requirement, CL
 
 ---
 
+## 2026-08-17 — Experiments COMPLETE. The specificity control decides it.
+
+`v_MP` reversed restores refusal by refusing half of all harmless prompts. `v_C` does not. That
+is the last number the project needed, and it lands on the good side.
+
+### The control
+
+At the headline dose (0.5·‖h‖), selectivity = attack refusal gained per point of over-refusal
+on 250 safe prompts:
+
+| condition | Δrefusal attacks | Δrefusal safe | ratio | degen (attacks) |
+|---|---|---|---|---|
+| **+v_C** | **+0.23** | **+0.03** | **7.19** | 0.01 |
+| +r̂ | +0.27 | +0.61 | 0.44 | 0.00 |
+| −v_MP (user-turn) | +0.14 | +0.47 | 0.30 | 0.10 |
+| −v_MP (system) | +0.08 | +0.52 | 0.15 | 0.17 |
+| random | −0.05 | −0.01 | n/a | 0.02 |
+
+The rival was well chosen: `v_MP` is 0.29-correlated with `v_C`, extracted by the same pipeline
+at the same layer, and **statistically tied** with it at predicting which attacks succeed (0.640
+vs 0.667, paired 95% CI [−0.040, +0.096]). Readout could not separate them at all. Intervention
+separates them completely — at +α they move refusal in OPPOSITE directions (+0.23 vs −0.25), and
+reversed, `v_MP` only restores refusal by becoming a blunt refuse-everything switch, worse than
+`r̂`. `v_C` is ~24× more selective than the best persona arm.
+
+This is stronger evidence for Claim 1 than the cosine it was going to rest on, and it supplies
+Claim 2 the specificity control the random-direction null never could: a random Gaussian is
+near-orthogonal to every real feature in 3584-d, so "random does nothing" was close to
+guaranteed and ruled out nothing.
+
+**Differential ablation (README step 5b) is therefore dropped, not forgotten.** Ablation asks
+whether `v_C` is necessary; the bidirectional persona control answers sufficiency AND specificity
+against a rival that readout calls equivalent. Stated as a limitation in the README rather than
+left as a gap. `knockout.layers` and the phantom `steer.layers: [12,14,16]` are deleted from the
+config — every sweep ran at L18 and a config key describing an experiment that never runs is a
+trap for whoever reads it next.
+
+### Three bugs in the analysis code, all the same shape
+
+Each time a new condition TYPE was added, the analysis assumed the old shape and dropped data:
+
+1. `--attacks` resolved against a hardcoded set list, so a non-default eval key became None.
+2. `--resume` hard-errored on a first run, dying after 19.7 GPU-minutes of generation.
+3. **`--extra-both-signs` conditions were silently discarded.** `v_C`'s two directions are
+   separate condition NAMES (steer_vc / steer_vc_neg), so nothing expected one name to carry both
+   signs; `effects_at_headline` matched on abs(alpha) and took the first hit. The −α persona
+   control generated, was judged, and then failed to appear in the table it was run to fill,
+   while the reading kept demanding a control that had already run. Conditions are now keyed by
+   name AND sign.
+
+Also: a 429 meaning "no credits remaining" is not a rate limit, and retrying it 200 times × 8
+burned 30 minutes and then blamed `max_workers`. Fatal API errors now stop the run fast and keep
+the verdicts already earned.
+
+### Where the project stands
+
+Both claims answered; steps 1–5 of the README method are done or explicitly superseded. Scope is
+one model, one attack family, one layer for the causal claim. **Remaining: the ~50-verdict human
+agreement check on the judge** — every number depends on it and it has already produced two wrong
+conclusions this project caught. Then the write-up.
+
+Nothing further is worth running: a second model, a second attack family and more layers would
+each add a limitation to the post rather than change a conclusion.
+
+---
+
 ## 2026-08-14 (later) — The over-refusal control, once it worked, changed the headline
 
 Ran the re-judge. Three things came out of it, and the first is the best result the project has.

@@ -16,6 +16,8 @@
     "steer_vc",
     "steer_vc_neg",
     "steer_random",
-    "steer_rhat"
+    "steer_rhat",
+    "steer_v_mp_persona_ut",
+    "steer_v_mp_persona"
   ]
 }

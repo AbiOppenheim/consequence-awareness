@@ -340,7 +340,26 @@ def readings(effects: dict, xstest: dict | None, headline, sel: dict | None = No
                        "v_mp_persona_ut.")
         else:
             for cond, s in rivals.items():
-                if s["d_refusal_attacks"] < 0.05:
+                if s["d_refusal_attacks"] <= -0.05:
+                    # A large NEGATIVE effect is not "no effect", and reporting it as one throws
+                    # away the finding. Two directions that tie on readout but steer refusal in
+                    # OPPOSITE directions at the same layer and dose are functionally distinct —
+                    # far stronger evidence than a cosine.
+                    out.append(
+                        f"OPPOSITE SIGN: {cond} steers refusal DOWN {s['d_refusal_attacks']:+.2f} "
+                        f"where v_C steers it UP {vc['d_refusal_attacks']:+.2f}, at the same "
+                        f"layer and dose, for {s['d_refusal_safe']:+.2f} on safe prompts. It does "
+                        "not reproduce v_C's effect, so that effect is not generic to extracted "
+                        "directions — and the opposite causal sign is distinctness evidence a "
+                        "cosine cannot give.")
+                    out.append(
+                        f"BUT THE SPECIFICITY TEST IS NOT FINISHED: the rival that might "
+                        f"reproduce v_C is -{cond}, which has not been run. A direction that "
+                        "moves refusal down at +alpha is exactly the one to suspect of moving it "
+                        "up at -alpha, possibly just as selectively. Run it before claiming the "
+                        "selectivity belongs to consequence: 05_generate.py --extra-direction "
+                        f"{cond.replace('steer_', '')} --extra-both-signs.")
+                elif abs(s["d_refusal_attacks"]) < 0.05:
                     out.append(f"{cond} moves attack refusal {s['d_refusal_attacks']:+.2f}, i.e. "
                                "barely — it does not reproduce the effect, so v_C's is not "
                                "generic to extracted directions.")

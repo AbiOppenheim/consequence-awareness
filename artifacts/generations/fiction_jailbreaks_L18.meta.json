@@ -7,10 +7,7 @@
     18
   ],
   "alphas": [
-    17.8,
-    35.7,
-    71.4,
-    142.7
+    35.7
   ],
   "seed": 0,
   "n_prompts": 100,
@@ -20,6 +17,7 @@
     "steer_vc_neg",
     "steer_random",
     "steer_rhat",
-    "steer_v_c_orth_r_hat"
+    "steer_v_mp_persona_ut",
+    "steer_v_mp_persona"
   ]
 }

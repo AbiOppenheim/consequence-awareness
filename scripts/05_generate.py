@@ -145,6 +145,12 @@ def main() -> None:
                          "Loads artifacts/directions/STEM_L{layer}.pt and adds a condition "
                          "'steer_STEM' at every alpha. Repeatable. Appends to the SAME output "
                          "file, so resumption keeps the conditions already generated.")
+    ap.add_argument("--extra-both-signs", action="store_true",
+                    help="sweep each --extra-direction at -alpha as well as +alpha. v_C gets "
+                         "both signs already; an extra did not, which left the sharpest control "
+                         "unrun: a rival that steers refusal DOWN at +alpha is exactly the one "
+                         "that may restore it at -alpha, and that is the condition v_C's "
+                         "selectivity claim has to beat.")
     ap.add_argument("--batch-size", type=int, default=None,
                     help="override generate.batch_size. The first thing to lower on a CUDA OOM; "
                          "it changes throughput, not the greedy completions.")
@@ -253,7 +259,7 @@ def main() -> None:
 
     try:
         run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, rand,
-                r_hat, extra)
+                r_hat, extra, args)
     except torch.cuda.OutOfMemoryError:
         done = len(done_keys(out, len(prompts)))
         raise SystemExit(
@@ -279,12 +285,13 @@ def main() -> None:
         "conditions": ["baseline", "steer_vc", "steer_vc_neg", "steer_random"]
                       + (["steer_rhat"] if r_hat is not None else [])
                       + [n for n, _ in extra],
+        "extra_both_signs": args.extra_both_signs,
     }, indent=2))
     print(f"[write] {out}\n[write] {meta}")
 
 
 def run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, rand,
-            r_hat, extra=()):
+            r_hat, extra=(), args=None):
     """Every condition in the sweep, skipping the ones already complete."""
     if ("baseline", 0.0) not in already:
         G.run_condition(model, tok, prompts, out, condition="baseline", gen_kwargs=gen_kwargs)
@@ -299,6 +306,8 @@ def run_all(model, tok, prompts, out, already, alphas, layers, gen_kwargs, v_c, 
         if r_hat is not None:
             conds.append(("steer_rhat", r_hat, +alpha))
         conds += [(name, vec, +alpha) for name, vec in extra]
+        if args and args.extra_both_signs:
+            conds += [(name, vec, -alpha) for name, vec in extra]
         for name, vec, a in conds:
             if (name, a) in already:
                 print(f"[skip] {name} alpha={a} already generated")

@@ -232,8 +232,12 @@ def main() -> None:
     else:
         layer, layer_file = results.selected_layer(rdir)
 
+    # --attacks may name an eval set that is not in the default list (a larger draw built under
+    # its own key so the original caches stay valid). Project whatever was asked for, not only
+    # what was hardcoded here.
+    sets = list(dict.fromkeys(SETS + [(args.attacks, args.attacks)]))
     available, missing = {}, []
-    for name, key in SETS:
+    for name, key in sets:
         path = adir / f"{key}_{model_slug}.npz"
         (available.setdefault(name, path) if path.exists() else missing.append((name, key, path)))
 
@@ -241,6 +245,12 @@ def main() -> None:
         raise SystemExit("no consequence activations — the real/hypo poles define the scale, so "
                          "nothing here can be computed without them.\n"
                          "  Run:  python scripts/01_cache_acts.py --dataset consequence")
+
+    if args.scores and args.attacks not in available:
+        raise SystemExit(
+            f"--scores was given but there are no cached activations for {args.attacks!r}.\n"
+            f"  The within-attack test pairs each verdict with that prompt's activation.\n"
+            f"  Run:  python scripts/01_cache_acts.py --dataset {args.attacks}")
 
     inputs = [layer_file, ddir / f"v_c_L{layer}.pt", ddir / f"random_L{layer}.pt"]
     inputs += [p for p in available.values()]
@@ -271,8 +281,9 @@ def main() -> None:
             raw_r, lab_r = project(available["refusal"], v_c)
             groups["harmful_plain"] = coord(raw_r[lab_r == 1])
             groups["harmless_plain"] = coord(raw_r[lab_r == 0])
-        for name in ("fiction_jailbreaks", "xstest"):
-            if name in available:
+        # Every remaining set is an eval set: no contrast labels, one group each.
+        for name in available:
+            if name not in ("consequence", "refusal"):
                 raw, _ = project(available[name], v_c)
                 groups[name] = coord(raw)
 
@@ -296,11 +307,11 @@ def main() -> None:
         # other-directions table below are what establish that, so the number is never read
         # without them.
         cross = None
-        if "fiction_jailbreaks" in groups and "harmful_plain" in groups:
-            cross = auc_with_ci(groups["harmful_plain"], groups["fiction_jailbreaks"], rng)
-            cross["d_mean"] = float(groups["fiction_jailbreaks"].mean()
+        if args.attacks in groups and "harmful_plain" in groups:
+            cross = auc_with_ci(groups["harmful_plain"], groups[args.attacks], rng)
+            cross["d_mean"] = float(groups[args.attacks].mean()
                                     - groups["harmful_plain"].mean())
-            acts_f, _, _ = A.load_acts(available["fiction_jailbreaks"])
+            acts_f, _, _ = A.load_acts(available[args.attacks])
             acts_r, lab_r2, _ = A.load_acts(available["refusal"])
             Xc = np.vstack([acts_r[lab_r2 == 1][:, layer - 1, :], acts_f[:, layer - 1, :]])
             yc = np.concatenate([np.zeros((lab_r2 == 1).sum()), np.ones(acts_f.shape[0])])
@@ -337,8 +348,8 @@ def report(res: dict, missing) -> None:
           "(0.0 = mean REAL framing, 1.0 = mean HYPO framing)")
     print(f"{'set':<22}{'n':>5}{'mean':>8}{'sd':>7}{'p10':>8}{'p90':>8}{'>hypo':>8}")
     print("-" * 66)
-    order = ["contrast_real", "contrast_hypo", "harmless_plain", "harmful_plain",
-             "xstest", "fiction_jailbreaks"]
+    order = ["contrast_real", "contrast_hypo", "harmless_plain", "harmful_plain", "xstest"]
+    order += [k for k in res["groups"] if k not in order]      # attack sets last, incl. --attacks
     for name in [o for o in order if o in res["groups"]]:
         g = res["groups"][name]
         print(f"{name:<22}{g['n']:>5}{g['mean']:>8.2f}{g['sd']:>7.2f}"

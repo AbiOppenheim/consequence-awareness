@@ -23,6 +23,7 @@ import os
 import re
 import tempfile
 import time
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import NamedTuple
 
@@ -136,6 +137,33 @@ BENIGN = Rubric(
 )
 RUBRICS = {r.name: r for r in (HARMFUL, BENIGN)}
 
+# A 429 has two very different causes and only one of them is worth retrying. Rate limiting is
+# transient and the SDK's backoff is exactly right for it. An exhausted balance is not: every
+# retry, on every row, is guaranteed to fail. That distinction cost a 30-minute judge run which
+# retried 200 rows eight times each against an account with no credits, and then reported the
+# result as "rate limits" — pointing at judge.max_workers, which was not the problem.
+FATAL_API_MARKERS = (
+    "no credits remaining", "insufficient_quota", "exceeded your current quota",
+    "billing", "payment required",
+)
+
+
+def is_fatal_api_error(exc: BaseException) -> bool:
+    """True when retrying cannot possibly help — an account/billing problem, not a rate limit."""
+    return any(m in str(exc).lower() for m in FATAL_API_MARKERS)
+
+
+class JudgeUnavailable(RuntimeError):
+    """The judge cannot be reached for a reason no retry will fix."""
+
+
+# Set the moment a fatal error is seen, so the remaining rows stop rather than each
+# spending eight retries on a request that cannot succeed. Verdicts already earned in
+# this run are kept: the caller still writes the scored file, so --resume picks up here.
+_STOP = threading.Event()
+
+
+
 # Back-compat aliases: the harmful rubric was the only one, and these names are what the rest
 # of the codebase and the regression tests already reach for.
 LABELS = HARMFUL.labels
@@ -198,10 +226,23 @@ def score_batch(rows: list[dict], model: str, provider: str = "openai",
         ("anthropic", True): _anthropic_batch,
     }[(provider, bool(use_batch_api))]
 
+    _STOP.clear()          # a fresh run is not bound by a previous one's fatal error
     print(f"[judge] {len(out)} generations | {provider} {model} | rubric {rubric.name!r} | "
           f"{'batch API' if use_batch_api else f'{max_workers} concurrent requests'}")
     runner(out, model, max_wait_s=max_wait_s, poll_s=poll_s, max_workers=max_workers,
            max_retries=max_retries, rubric=rubric)
+
+    if _STOP.is_set():
+        # Distinguish this from rate limiting in the one place the user reads. The generic
+        # "lower judge.max_workers" advice is actively misleading for an empty balance.
+        fatal = next((r["judge_error"] for r in out
+                      if r.get("judge_error") and is_fatal_api_error(Exception(r["judge_error"]))),
+                     "unknown")
+        print("\n[judge] STOPPED EARLY — the API refused for a reason retrying cannot fix:\n"
+              f"        {fatal[:160]}\n"
+              "        This is an account/billing problem, NOT a rate limit: lowering\n"
+              "        judge.max_workers will not help. Verdicts earned before the stop are\n"
+              "        written, so --resume judges only what is left once it is sorted out.")
 
     n_ok = sum(r.get("label") in rubric.labels for r in out)
     n_bad = len(out) - n_ok
@@ -259,11 +300,16 @@ def _openai_concurrent(out, model, *, max_workers=4, max_retries=8, rubric=HARMF
     client = OpenAI(max_retries=max_retries)
 
     def judge_one(i: int) -> None:
+        if _STOP.is_set():
+            out[i].update(label=None, judge_error="skipped: judge unavailable")
+            return
         try:
             resp = client.chat.completions.create(**_openai_params(model, out[i], rubric))
             out[i].update(parse_reply(resp.choices[0].message.content, rubric))
         except Exception as e:                          # noqa: BLE001
             out[i].update(label=None, judge_error=f"{type(e).__name__}: {e}")
+            if is_fatal_api_error(e):
+                _STOP.set()
 
     done = 0
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
@@ -326,6 +372,8 @@ def _openai_batch(out, model, *, max_wait_s=7200, poll_s=30, max_retries=8, rubr
             out[i].update(parse_reply(body["choices"][0]["message"]["content"], rubric))
         except Exception as e:                          # noqa: BLE001
             out[i].update(label=None, judge_error=f"{type(e).__name__}: {e}")
+            if is_fatal_api_error(e):
+                _STOP.set()
 
 
 # --------------------------------------------------------------------------- Anthropic
@@ -347,12 +395,17 @@ def _anthropic_concurrent(out, model, *, max_workers=4, max_retries=8, rubric=HA
     client = anthropic.Anthropic(max_retries=max_retries)
 
     def judge_one(i: int) -> None:
+        if _STOP.is_set():
+            out[i].update(label=None, judge_error="skipped: judge unavailable")
+            return
         try:
             msg = client.messages.create(**_anthropic_params(model, out[i], rubric))
             out[i].update(parse_reply(
                 next(b.text for b in msg.content if b.type == "text"), rubric))
         except Exception as e:                          # noqa: BLE001
             out[i].update(label=None, judge_error=f"{type(e).__name__}: {e}")
+            if is_fatal_api_error(e):
+                _STOP.set()
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         list(pool.map(judge_one, range(len(out))))

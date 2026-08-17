@@ -179,6 +179,46 @@ def main() -> int:
                 b["refused_rate"] == 0.5 and b["answered_rate"] == 0.5
                 and not any("strongreject" in k for k in b))
 
+    # ---- a billing failure stops fast and keeps what it earned ---------------------------
+    #
+    # An empty balance and a rate limit are both 429s, and only one is worth retrying. Treating
+    # them alike spent 30 minutes retrying 200 rows eight times each against an account with no
+    # credits, then blamed rate limits.
+    ok &= check("an empty balance is recognised as fatal",
+                J.is_fatal_api_error(Exception(
+                    "Error code: 429 - You have no credits remaining. Add credits to continue")))
+    ok &= check("a plain rate limit is NOT treated as fatal",
+                not J.is_fatal_api_error(Exception(
+                    "Error code: 429 - Rate limit reached for gpt-4.1-mini, retry in 20s")))
+
+    many = [{"prompt": f"p{i}", "completion": f"c{i}", "condition": "baseline", "alpha": 0.0}
+            for i in range(40)]
+
+    def broke_after_two(i):
+        if i < 2:
+            return VALID
+        raise RuntimeError("Error code: 429 - You have no credits remaining.")
+
+    seen = install_stub_openai(broke_after_two)
+    scored = J.score_batch(many, model="gpt-4.1-mini", provider="openai", max_workers=1)
+    good = [r for r in scored if r.get("label") in J.LABELS]
+    skipped = [r for r in scored if "skipped" in str(r.get("judge_error"))]
+    ok &= check("verdicts earned before the failure are kept, not discarded", len(good) == 2)
+    ok &= check("remaining rows are skipped rather than each burning its retries",
+                len(skipped) > 0)
+    ok &= check("every row is still accounted for", len(scored) == len(many))
+    ok &= check("it stops well short of requesting all 40 rows", len(seen) < len(many))
+
+    def rate_limited_once(i):
+        if i == 3:
+            raise RuntimeError("Error code: 429 - Rate limit reached, retry in 20s")
+        return VALID
+
+    install_stub_openai(rate_limited_once)
+    scored = J.score_batch(many, model="gpt-4.1-mini", provider="openai", max_workers=1)
+    ok &= check("a transient rate limit does NOT stop the run",
+                sum(1 for r in scored if r.get("label") in J.LABELS) == len(many) - 1)
+
     # ---- the batch path builds the JSONL the API expects --------------------------------
     line = json.dumps({"custom_id": "gen-0", "method": "POST", "url": "/v1/chat/completions",
                        "body": J._openai_params("gpt-4.1-mini", rows[0])})

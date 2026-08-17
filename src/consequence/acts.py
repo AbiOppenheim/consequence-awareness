@@ -81,6 +81,46 @@ def _render(tok, prompt: str | dict) -> str:
     return tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
 
+def _decoder(model):
+    """The transformer stack WITHOUT the LM head.
+
+    Caching residual streams never needs logits, but calling the causal-LM wrapper computes
+    them anyway: a [batch, seq_len, vocab] tensor, and Qwen2.5's vocab is ~152k. At batch 16
+    that is ~3 GiB per forward for a 700-token prompt, allocated and immediately discarded. The
+    short contrast prompts hid this; the fiction jailbreaks are an order of magnitude longer and
+    OOM'd an L4 inside lm_head. The decoder returns the identical hidden_states — the causal-LM
+    forward is exactly `logits = lm_head(decoder(...))`, and the final norm is applied inside
+    the decoder — so this changes memory, not numbers. `_assert_decoder_matches` proves that
+    rather than asserting it, because every cached activation in the project depends on it.
+    """
+    return model.get_decoder() if hasattr(model, "get_decoder") else getattr(model, "model", model)
+
+
+@torch.no_grad()
+def _assert_decoder_matches(model, tok) -> None:
+    """Check the head-free path reproduces the full model's hidden states, on two short prompts.
+
+    Caches built before this change came through the causal-LM path. Stage 12 compares those
+    caches against ones built after it, so a discrepancy here would not crash — it would move
+    every projection by an unknown amount and invalidate exactly the comparison the stage makes.
+    One tiny forward pass is a cheap price for ruling that out.
+    """
+    enc = tok([_render(tok, "hello"), _render(tok, "hi there")],
+              return_tensors="pt", padding=True).to(model.device)
+    full = model(**enc, output_hidden_states=True).hidden_states
+    dec = _decoder(model)(**enc, output_hidden_states=True).hidden_states
+    if len(full) != len(dec):
+        raise RuntimeError(f"decoder returned {len(dec)} hidden states, model returned {len(full)}")
+    worst = max((a.float() - b.float()).abs().max().item() for a, b in zip(full, dec))
+    if worst > 1e-3:
+        raise RuntimeError(
+            f"head-free path disagrees with the full model by {worst:.3g}.\n"
+            "  Activations cached this way would NOT be comparable to the existing caches.\n"
+            "  Do not proceed: re-cache everything with --force, or revert to the full model."
+        )
+    print(f"[acts] head-free path verified (max |diff| {worst:.2g})")
+
+
 @torch.no_grad()
 def cache_activations(
     model, tok, prompts: list[str], token_position: int = -1, batch_size: int = 16
@@ -89,11 +129,24 @@ def cache_activations(
 
     n_layers excludes the embedding layer (we drop hidden_states[0]).
     """
-    out = []
-    for start in range(0, len(prompts), batch_size):
-        batch = [_render(tok, p) for p in prompts[start : start + batch_size]]
-        enc = tok(batch, return_tensors="pt", padding=True).to(model.device)
-        hs = model(**enc, output_hidden_states=True).hidden_states  # tuple len n_layers+1
+    _assert_decoder_matches(model, tok)
+    decoder = _decoder(model)
+    out, start, bs = [], 0, batch_size
+    while start < len(prompts):
+        batch = [_render(tok, p) for p in prompts[start : start + bs]]
+        try:
+            enc = tok(batch, return_tensors="pt", padding=True).to(model.device)
+            hs = decoder(**enc, output_hidden_states=True).hidden_states  # len n_layers+1
+        except torch.cuda.OutOfMemoryError:
+            # Prompt length varies by an order of magnitude across our datasets, so one fixed
+            # batch size cannot fit them all. Halve and retry rather than failing a run that is
+            # already several GPU-minutes in; the activations do not depend on batch size.
+            if bs == 1:
+                raise
+            bs = max(1, bs // 2)
+            torch.cuda.empty_cache()
+            print(f"[acts] CUDA OOM at batch {bs * 2} — retrying at {bs}")
+            continue
 
         # With left padding the last real token is at index -1 for every row; if the
         # tokenizer pads right, fall back to the attention mask to find each row's last token.
@@ -106,6 +159,8 @@ def cache_activations(
         # stack layers 1..n_layers -> [n_layers, batch, d]; select token -> [n_layers, batch, d]
         per_layer = [layer[rows, idx, :].float().cpu() for layer in hs[1:]]
         out.append(torch.stack(per_layer, dim=1).numpy())  # [batch, n_layers, d]
+        start += bs
+        del hs, enc
     return np.concatenate(out, axis=0)
 
 

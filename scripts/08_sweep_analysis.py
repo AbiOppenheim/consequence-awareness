@@ -33,10 +33,23 @@ MAX_DEGENERATE = 0.05
 OVER_REFUSAL_LIMIT = 0.10
 
 
+def signed_key(cond: str, alpha: float) -> str:
+    """Condition name that distinguishes +alpha from -alpha.
+
+    v_C's two directions are separate condition NAMES (steer_vc / steer_vc_neg), so nothing
+    downstream expected one name to carry both signs. --extra-both-signs writes them under the
+    same name, and the effects table matched on abs(alpha) and took the first hit — silently
+    dropping the negative arm of every extra direction. That is how the -alpha persona control
+    ran, was judged, and then failed to appear in the selectivity table it was run to fill.
+    """
+    return f"{cond}_neg" if alpha < 0 and not cond.endswith("_neg") else cond
+
+
 def summarize_by_condition(rows: list[dict], rubric) -> dict:
     by = defaultdict(list)
     for r in rows:
-        by[(r["condition"], float(r.get("alpha") or 0.0))].append(r)
+        alpha = float(r.get("alpha") or 0.0)
+        by[(signed_key(r["condition"], alpha), alpha)].append(r)
     return {k: J.summarize(v, rubric) for k, v in by.items()}
 
 

@@ -12,7 +12,7 @@ A 2026 interpretability agenda (*From Adversarial Poetry to Adversarial Tales*) 
 
 ## Method (5 steps)
 
-1. **Contrastive dataset** — ~100–200 minimal pairs, same task, differing only in real-vs-hypothetical framing; ≥10 diverse templates with held-out phrasings so the probe can't learn surface vocabulary.
+1. **Contrastive dataset** — minimal pairs, same task, differing only in real-vs-hypothetical framing; diverse templates with held-out phrasings so the probe can't learn surface vocabulary. *As built: 1,000 pairs from 40 benign tasks × 140 templates over 51 semantic routes, split 100/40 by template and 31/20 by route.*
 2. **Probe** — per-layer linear probes on residual-stream activations of Qwen2.5-7B-Instruct (Llama-3.1-8B as robustness check); extract candidate direction `v_C` by difference-in-means.
 3. **Correlational test** — do published fiction-framed jailbreaks actually move the model along `v_C`?
 4. **Causal test** — steer toward "real" (`h ← h + α·v_C`) during jailbreaks; measure refusal restoration vs. random-direction and refusal-direction baselines, using a three-way refusal/bypass/degenerate metric.
@@ -50,7 +50,7 @@ Forked foundations: [`andyrdt/refusal_direction`](https://github.com/andyrdt/ref
 python -m venv .venv && source .venv/bin/activate
 pip install -e .                       # or: pip install numpy scikit-learn pyyaml matplotlib torch
 
-python scripts/00_build_consequence.py         # cross-product benign_tasks.jsonl × framings.jsonl
+python scripts/00_build_consequence.py         # pair-samples benign_tasks.jsonl × framings.jsonl
 ```
 
 Each research step is one script. Steps that cost real time store their numbers in
@@ -113,13 +113,19 @@ and live in `artifacts/results/*.json` with the git SHA and input hashes that pr
 
 **Claim 1 — a consequence direction exists and is distinct.** Held out **40 framing templates**
 touched by nothing until the final reveal: the unfitted `v_C` projection scores **AUC 0.935**
-there, against a 100-draw random band and a best fitted surface baseline (tf-idf uni+bigram) of
-**0.847**. The unfitted curve *rises* with depth (0.855 → 0.94), which a lexical artifact would
-not do. At L18, cos(`v_C`, `r̂`) = **0.085** and cos(`v_C`, `v_MP`) = **0.24–0.29** against a
+there, against a 100-draw random band and a best fitted lexical baseline (tf-idf uni+bigram) of
+**0.847**. The unfitted curve *rises* with depth (0.855 → 0.942 at L20), which a lexical artifact
+would not do. At L18, cos(`v_C`, `r̂`) = **0.085** and cos(`v_C`, `v_MP`) = **0.24–0.29** against a
 random-direction band of 0.032 — distinct, with modest overlap, not orthogonal. Removing the
 `r̂` component costs **0.000** held-out AUC, so the real-vs-hypothetical information does not
 live in the refusal direction. Extraction itself was validated first: our `r̂` reproduces
-Arditi's at **cos 0.9999** with a discriminating control set (`results/gate.json`).
+Arditi's at **cos 0.9999** with a discriminating control set (`results/gate.json`), and our
+reimplemented `v_MP` reproduces the one number Zhong publishes about it — their Table 8 gives
+cos(`v_MP`, `r̂`) = −0.279 for Qwen at L20, ours is **−0.286**.
+
+*Caveat on the layer selection:* train group-CV AUC runs 0.9955–0.9994 across all nine candidate
+layers, so the selection metric is at ceiling everywhere and L18 was effectively drawn from nine
+indistinguishable candidates. That matters because the causal effect below is layer-specific.
 
 **Claim 2 — steering is causal, and selective.** At the headline dose (0.5·‖h‖, the strongest
 that keeps output coherent):
@@ -135,7 +141,7 @@ Selectivity is attack refusal gained per point of over-refusal on 250 safe XSTes
 it is the number the defense claim rests on: `r̂` restores refusal by refusing **61% more
 harmless prompts**, which is an off switch rather than a defense. `v_C` is ~16× more selective
 than `r̂` and ~24× more than the best persona arm. The effect survives orthogonalization against
-`r̂` (+0.25).
+`r̂` (+0.25) — though that arm has no XSTest run, so its selectivity is unmeasured.
 
 **The specificity control is the strongest single result.** `v_MP` is 0.29-correlated with
 `v_C`, extracted by the same pipeline, and **statistically tied** with it at predicting which
@@ -144,28 +150,42 @@ Intervention separates them completely: at +α they move refusal in **opposite d
 (`v_C` +0.23, `v_MP` −0.25), and reversed, `v_MP` restores refusal only by becoming a blunt
 refuse-everything switch. This replaces the planned differential ablation — necessity — with a
 sharper question, sufficiency and specificity against a rival that readout says is equivalent.
+*Caveat:* Zhong steers `v_MP` at L20 and locates the Qwen persona effect in L20–L22; we steer it
+at L18 to hold the layer fixed against `v_C`, so the control runs outside the window where the
+rival is documented to act.
 
 **What did not work, reported as found.**
 
 - **The correlational test (step 3) is weak.** Within 495 attacks, `v_C` predicts which succeed
-  at AUC **0.640** (bootstrap CI [0.587, 0.692]) but **p = 0.06** against 200 random directions —
+  at AUC **0.640** (bootstrap CI [0.587, 0.692]) but **p = 0.07** against 200 random directions —
   a real in-sample association, only marginally specific to `v_C`. Not a length artifact
   (0.632 after residualising on ‖h‖).
 - **The obvious version of that test is untestable.** Attacks vs. plain harmful prompts looks
   emphatic (AUC 0.971) and means nothing: the sets differ ~10× in length, ~8% of *arbitrary*
   directions match it, `r̂` separates them better, and the raw vector norm alone reaches 0.899.
   Kept in `12_project_evals.py` as a labelled diagnostic, never a finding.
-- **The effect is layer-specific.** At L22 — where `v_C` reads out *best* (0.942 vs 0.935) —
-  steering moves refusal **+0.00**. Readout quality and causal efficacy dissociate, so Claim 2
-  is scoped to L18 and both layers are reported.
-- **Steering is one-sided**, which the projection explains: **86%** of attacks already sit past
-  the hypothetical pole, so −α has no headroom.
+- **The effect is layer-specific.** At L22 — where `v_C` reads out marginally *better* than at
+  L18 (0.940 vs 0.935; the readout peak is L20 at 0.942) — steering moves refusal **+0.00**.
+  Readout quality and causal efficacy dissociate, so Claim 2 is scoped to L18 and both layers
+  are reported. The L22 arm has no over-refusal control, which does not undermine a null but
+  means the two layers were not evaluated equally.
+- **Steering is one-sided**, which the projection largely explains: **84%** of the attack set
+  (85.6% at n = 500) already sits past the mean-hypothetical pole, so −α has little headroom.
+  Read that against ordinary hypothetical prompts, **47%** of which also sit past their own
+  mean — not against zero. It does *not* explain why −α makes the model refuse 34.8% of safe
+  prompts; `−v_C` most likely lands off-manifold, but that is untested.
 
 **Instrument caveats.** A second independent judging pass over identical generations gives mean
 |drift| **0.013** (max 0.080), so the effects are ~18× judge noise — but the random null itself
-moved +0.00 → −0.05 between passes, so effects are quoted against a band, not a point.
-StrongREJECT disagrees with its own label on 8–9% of rows and is reported conditioned on bypass,
-never alone. The judge has not been validated against human labels.
+moved +0.00 → −0.05 between passes, so effects are quoted against a band, not a point. That
+measures the judge's *consistency*, not its *accuracy*. StrongREJECT disagrees with its own label
+on **8.0%** of rows (376/4,700) and is reported conditioned on bypass, never alone. The judge has
+not been validated against human labels.
+
+**On statistics.** n = 100 per (condition, α) cell, and the design is **within-prompt** — the same
+100 attacks, greedy decoding, seed 0, under every condition — so the correct test is McNemar or a
+paired bootstrap rather than an unpaired two-proportion SE. Even the conservative unpaired figure
+at the observed rates is ~0.050, putting +0.23 at ~4.6 SE.
 
 ## Status
 

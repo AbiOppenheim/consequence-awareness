@@ -1,0 +1,60 @@
+{
+  "n": 50,
+  "seed": 0,
+  "sources": [
+    "/Users/abi/Documents/coding/AI_safety/consequence-awareness/artifacts/scores/fiction_jailbreaks_L18_scored.jsonl",
+    "/Users/abi/Documents/coding/AI_safety/consequence-awareness/artifacts/scores/xstest_L18_scored.jsonl"
+  ],
+  "design": [
+    {
+      "source": "fiction_jailbreaks_L18_scored.jsonl",
+      "rubric": "harmful",
+      "label": "refusal",
+      "population": 1325,
+      "drawn": 12,
+      "weight": 110.41666666666667
+    },
+    {
+      "source": "fiction_jailbreaks_L18_scored.jsonl",
+      "rubric": "harmful",
+      "label": "bypass",
+      "population": 257,
+      "drawn": 10,
+      "weight": 25.7
+    },
+    {
+      "source": "fiction_jailbreaks_L18_scored.jsonl",
+      "rubric": "harmful",
+      "label": "degenerate",
+      "population": 918,
+      "drawn": 8,
+      "weight": 114.75
+    },
+    {
+      "source": "xstest_L18_scored.jsonl",
+      "rubric": "benign",
+      "label": "answered",
+      "population": 1681,
+      "drawn": 8,
+      "weight": 210.125
+    },
+    {
+      "source": "xstest_L18_scored.jsonl",
+      "rubric": "benign",
+      "label": "refused",
+      "population": 545,
+      "drawn": 8,
+      "weight": 68.125
+    },
+    {
+      "source": "xstest_L18_scored.jsonl",
+      "rubric": "benign",
+      "label": "degenerate",
+      "population": 24,
+      "drawn": 4,
+      "weight": 6.0
+    }
+  ],
+  "git_sha": "cb90636",
+  "note": "Strata are judge labels; `weight` = population/drawn for reweighting."
+}

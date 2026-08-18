@@ -39,9 +39,12 @@ Headline, all at L18 on Qwen2.5-7B, fiction/role-play attacks only:
 - The specificity control settles distinctness causally. `v_MP` is 0.29-correlated with `v_C`
   and **tied** with it on readout, but at +α they steer refusal in *opposite* directions, and
   reversed `v_MP` only restores refusal by refusing ~half of all harmless prompts (ratio 0.30).
-- Honest negatives that belong in the post: the correlational test is weak (0.640, p = 0.06);
+- Honest negatives that belong in the post: the correlational test is weak (0.640, p = 0.07);
   its cross-set version is untestable and labelled as such; and at **L22 steering does nothing**
-  (+0.00) even though `v_C` reads out best there — readout and causation dissociate.
+  (+0.00) even though `v_C` reads out marginally better there than at L18 (0.940 vs 0.935; the
+  readout peak is L20 at 0.942) — readout and causation dissociate.
+- The L18 layer pick was not identified by the data: train CV AUC is 0.9955–0.9994 across all
+  nine candidate layers, i.e. at ceiling everywhere. Say so, given the effect is layer-specific.
 
 **The one outstanding task is the ~50-verdict human agreement check on the judge.** Every number
 above depends on `gpt-4.1-mini`, and that instrument has produced two wrong conclusions this

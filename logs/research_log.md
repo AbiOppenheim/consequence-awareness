@@ -4,6 +4,69 @@ Newest entries at the top. One entry per working session (course requirement, CL
 
 ---
 
+## 2026-08-17 (later) — Documentation audit: the prose was 10 commits behind the artifacts
+
+No new experiments. Audited `docs/overview.md` line by line against `artifacts/results/*.json`,
+`artifacts/scores/*.summary.json`, `data/contrast/consequence.jsonl`, the notebook, and the
+Arditi + Zhong PDFs, then propagated the fixes to every reader-facing document.
+
+**The overview was written at `29cae37` and never updated.** Three of its six "open questions"
+had been answered in the meantime, and the result the project now leads with — the bidirectional
+persona control — was absent entirely. Corrected: the correlational test (0.640, p = 0.07) had
+run; `v_MP` had been steered both signs; selectivity was missing from the Claim-2 table; and the
+one-sidedness was resolved by the projection.
+
+**Errors found in numbers, not just staleness:**
+
+- *"5,050 judged generations"* → **6,950** (2,500 + 2,250 + 1,700 + 500 across the summaries).
+- StrongREJECT self-disagreement *"~7%"* → **8.0%** (376/4,700). The 7% was the baseline cell.
+- README and CLAUDE.md carried **p = 0.06** for the within-attack test; the artifact says 0.07.
+- README and the entry below say *"L22 is where `v_C` reads out best — 0.942"*. **0.942 is L20**;
+  L22 is 0.940. Notebook §24 quoted 0.955, which matches no artifact at all. Fixed in the README,
+  CLAUDE.md and the notebook; left standing in the entry below, since the log is a record.
+
+**Two substantive additions, both free.**
+
+1. **`v_MP` is validated after all.** Phase 4 has said since 2026-08-11 that our reimplementation
+   has *"no reference to check it against — a real limitation"*. Zhong's Table 8 publishes
+   cos(`v_MP`, `r̂`) = **−0.279** for Qwen at L20. Our `geometry.json` gives **−0.286** at L20 —
+   0.007 away, on the only quantity their paper states about this vector. The limitation was
+   never real; we simply had not read their appendix against our own artifact.
+2. **The specificity control runs outside Zhong's layer window.** They steer MP at **L20** and
+   locate the Qwen persona effect in **L20–L22**; we steer it at L18 to hold the layer fixed
+   against `v_C`. That is the right call for a matched comparison and a genuine caveat on the
+   control. Now stated in both the README and the overview.
+
+**Two things we were getting wrong in our own favour's opposite direction.**
+
+- **The Arditi attribution was too strong.** §5.1 shows refusal-direction suppression for
+  **GCG adversarial suffixes** on **Qwen-1.8B-Chat**, measured as cosine similarity — one attack
+  family, correlational, and not fiction framing. We were citing it as "the standard story" for
+  narrative jailbreaks. Rescoping it *strengthens* the novelty claim.
+- **The significance test is under-powered by choice.** The design is within-prompt (same 100
+  attacks, greedy, seed 0, every condition), so McNemar or a paired bootstrap is correct, not the
+  unpaired two-proportion SE. Even unpaired at the observed rates (0.72 → 0.95) the SE is ~0.050,
+  putting +0.23 at **4.6 SE**, not the 3.5 we had been quoting off a generic 0.065.
+
+**One weakness we had been soft-pedalling.** `layer_select.json` runs **0.9955–0.9994** across all
+nine candidate layers: the selection metric is at ceiling everywhere, so "the curve is flat
+(spread 0.004)" is saturation, not reassurance. L18 was effectively drawn from nine
+indistinguishable candidates. Harmless while we expected smooth depth behaviour; not harmless now
+that steering is dead at L22. Stated plainly in all four documents.
+
+**Files touched:** `docs/overview.md` (rewritten), `README.md`, `CLAUDE.md`,
+`notebooks/phase2_3_gate_and_vc_colab.ipynb` (four markdown cells — §12, §24, §27, §29; cell ids,
+order, outputs and execution counts verified unchanged).
+
+**Verified correct, no change needed:** all five gate numbers; the entire Stage B dataset
+description (2,000 rows, 140 templates, 51 routes split 31/20 disjoint, 714/714 and 286/286,
+1,000 pairs, 0 task mismatches — all exact); every held-out AUC; every geometry cosine; the L22
+figures; the negative-arm degeneracy. And `v_C ⊥ r̂` genuinely still has no XSTest run.
+
+**Remaining:** unchanged — the ~50-verdict human agreement check on the judge, then the post.
+
+---
+
 ## 2026-08-17 — Experiments COMPLETE. The specificity control decides it.
 
 `v_MP` reversed restores refusal by refusing half of all harmless prompts. `v_C` does not. That
